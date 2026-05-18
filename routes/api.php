@@ -8,17 +8,6 @@ use App\Http\Controllers\NfrHealthController;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\RateLimiter;
 
-// Define concurrent limiter using Redis
-RateLimiter::for('concurrent', function ($job) {
-    return (new \Illuminate\Cache\RateLimiting\Limit('concurrent', 50))
-        ->by($job->ip())
-        ->response(function () {
-            return response()->json([
-                'message' => 'Server capacity full. Try again shortly.',
-                'max_capacity' => 50,
-            ], 503);
-        });
-});
 
 Route::get('/health', NfrHealthController::class);
 
