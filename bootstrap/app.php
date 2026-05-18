@@ -3,8 +3,8 @@
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
+use App\Http\Middleware\RequestCorrelationMiddleware;
 use App\Http\Middleware\CapacityLimiter;
-use App\Http\Middleware\RequestCorrelation;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -14,7 +14,7 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        $middleware->append(RequestCorrelation::class);
+        $middleware->append(RequestCorrelationMiddleware::class);
         $middleware->alias([
             'capacity' => CapacityLimiter::class,
         ]);

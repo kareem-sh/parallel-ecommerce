@@ -24,9 +24,9 @@ services:
       LOG_CHANNEL: stack
       LOG_STACK: single,stderr
       NFR_LOG_LEVEL: info
-      TELESCOPE_ENABLED: "true"
+      TELESCOPE_ENABLED: "false"
     expose:
-      - "8000"
+      - "9000"
     volumes:
       - ./storage:/var/www/html/storage
     depends_on:
@@ -34,17 +34,13 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
-    healthcheck:
-      test: ["CMD-SHELL", "php -r \"exit(@file_get_contents('http://127.0.0.1:8000/up') === false ? 1 : 0);\""]
-      interval: 10s
-      timeout: 5s
-      retries: 20
+    networks:
+      - ecommerce-network
 
   app2:
     restart: unless-stopped
     build:
       context: .
-    command: ["sh", "-c", "php artisan serve --host=0.0.0.0 --port=8000"]
     environment:
       APP_NAME: E-Commerce-NFR
       APP_ENV: local
@@ -66,14 +62,16 @@ services:
       LOG_CHANNEL: stack
       LOG_STACK: single,stderr
       NFR_LOG_LEVEL: info
-      TELESCOPE_ENABLED: "true"
+      TELESCOPE_ENABLED: "false"
     expose:
-      - "8000"
+      - "9000"
     volumes:
       - ./storage:/var/www/html/storage
     depends_on:
       app:
-        condition: service_healthy
+        condition: service_started
+    networks:
+      - ecommerce-network
 
   worker:
     restart: unless-stopped
@@ -85,6 +83,7 @@ services:
       APP_ENV: local
       APP_DEBUG: "true"
       APP_KEY: base64:asrRVX0x4bYn244tj7WxGOS4GULHrjfzb1tXtt80mss=
+      APP_URL: http://localhost:8000
       DB_CONNECTION: mysql
       DB_HOST: mysql
       DB_PORT: 3306
@@ -100,12 +99,14 @@ services:
       LOG_CHANNEL: stack
       LOG_STACK: single,stderr
       NFR_LOG_LEVEL: info
-      TELESCOPE_ENABLED: "true"
+      TELESCOPE_ENABLED: "false"
     volumes:
       - ./storage:/var/www/html/storage
     depends_on:
       app:
-        condition: service_healthy
+        condition: service_started
+    networks:
+      - ecommerce-network
 
   nginx:
     image: nginx:1.27-alpine
@@ -113,11 +114,14 @@ services:
       - "8000:80"
     volumes:
       - ./docker/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./public:/var/www/html/public:ro
     depends_on:
       app:
-        condition: service_healthy
+        condition: service_started
       app2:
         condition: service_started
+    networks:
+      - ecommerce-network
 
   mysql:
     image: mysql:8.4
@@ -135,6 +139,8 @@ services:
       interval: 5s
       timeout: 5s
       retries: 20
+    networks:
+      - ecommerce-network
 
   redis:
     image: redis:7-alpine
@@ -148,18 +154,28 @@ services:
       interval: 5s
       timeout: 3s
       retries: 10
+    networks:
+      - ecommerce-network
 
   k6:
     image: grafana/k6:0.51.0
     profiles: ["test"]
     environment:
-      BASE_URL: http://nginx
+      BASE_URL: http://nginx:80
     volumes:
       - ./tests/k6:/scripts
       - ./storage/k6:/results
     depends_on:
       - nginx
     entrypoint: ["k6"]
+    networks:
+      - ecommerce-network
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+networks:
+  ecommerce-network:
+    driver: bridge
 
 volumes:
   mysql-data:
