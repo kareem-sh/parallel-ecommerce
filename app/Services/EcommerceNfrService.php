@@ -306,4 +306,37 @@ class EcommerceNfrService
     {
         return round((microtime(true) - $started) * 1000, 2);
     }
+    
+    public function processDailySalesReport(): array
+    {
+        $started = microtime(true);
+
+        $processed = 0;
+        $totalRevenue = 0;
+
+        Order::query()
+            ->with('items')
+            ->chunk(100, function ($orders) use (&$processed, &$totalRevenue) {
+
+                foreach ($orders as $order) {
+                    $processed++;
+
+                    $totalRevenue += $order->total;
+                }
+            });
+
+        Log::channel('nfr')->info('daily_sales_processed_in_chunks', [
+            'processed_orders' => $processed,
+            'total_revenue' => $totalRevenue,
+            'duration_ms' => $this->durationMs($started),
+        ]);
+
+        return [
+            'processed_orders' => $processed,
+            'total_revenue' => $totalRevenue,
+            'duration_ms' => $this->durationMs($started),
+            'solution' => 'Large datasets are processed in chunks to reduce memory usage.',
+        ];
+    }
 }
+
