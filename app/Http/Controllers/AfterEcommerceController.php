@@ -18,6 +18,8 @@ class AfterEcommerceController extends Controller
     {
         $payload = $this->service->optimizedProducts($this->limit($request, 100));
 
+        usleep(50000000); // Simulate processing delay so capacity limiter can be tested
+
         return response()->json($payload)
             ->header('X-Backend-Version', 'after')
             ->header('X-Backend-Cache', $payload['cached'] ? 'hit' : 'miss')

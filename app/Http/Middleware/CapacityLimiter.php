@@ -5,31 +5,63 @@ namespace App\Http\Middleware;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Log;
 use Symfony\Component\HttpFoundation\Response;
 
 class CapacityLimiter
 {
-    public function handle(Request $request, Closure $next, int $maxConcurrent = 20): Response
-    {
-        $key = 'capacity:api:active';
-        $lock = Cache::lock('lock:'.$key, 5);
+    public function handle(
+        Request $request,
+        Closure $next,
+        int $maxConcurrent = 50
+    ): Response {
 
-        $lock->block(2, function () use ($key, $maxConcurrent) {
-            $active = (int) Cache::get($key, 0);
+        // Log that middleware is running
+        Log::info('CAPACITY: Middleware triggered', [
+            'path' => $request->path(),
+            'max' => $maxConcurrent,
+            'ip' => $request->ip()
+        ]);
 
-            abort_if($active >= $maxConcurrent, 503, 'Server capacity is currently full. Please retry shortly.');
+        $key = 'capacity:' . str_replace('/', '_', $request->path());
 
-            Cache::put($key, $active + 1, now()->addSeconds(30));
-        });
+        // Atomic increment
+        $active = Cache::increment($key);
+
+        Log::info('CAPACITY: Current count', [
+            'key' => $key,
+            'active' => $active,
+            'max' => $maxConcurrent
+        ]);
+
+        // Set expiry on first increment
+        if ($active === 1) {
+            Cache::expire($key, 30);
+        }
+
+        // Check capacity
+        if ($active > $maxConcurrent) {
+            Cache::decrement($key);
+
+            Log::warning('CAPACITY: Rejected request', [
+                'active' => $active,
+                'max' => $maxConcurrent
+            ]);
+
+            return response()->json([
+                'message' => 'Server capacity is currently full. Please retry shortly.',
+                'active_requests' => $active - 1,
+                'max_capacity' => $maxConcurrent,
+            ], 503);
+        }
 
         try {
-            return $next($request);
+            $response = $next($request);
+            Log::info('CAPACITY: Request completed successfully');
+            return $response;
         } finally {
-            $lock->block(2, function () use ($key) {
-                $active = max(0, (int) Cache::get($key, 1) - 1);
-
-                Cache::put($key, $active, now()->addSeconds(30));
-            });
+            $remaining = Cache::decrement($key);
+            Log::info('CAPACITY: Decremented counter', ['remaining' => $remaining]);
         }
     }
 }
