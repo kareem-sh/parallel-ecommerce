@@ -16,13 +16,18 @@ class AfterEcommerceController extends Controller
 
     public function products(Request $request): JsonResponse
     {
-        $payload = $this->service->optimizedProducts($this->limit($request, 100));
+        $requestId = $this->requestId();
+
+        $payload = $this->service->optimizedProducts(
+            $this->limit($request, 100)
+        );
 
         usleep(50000000); // Simulate processing delay so capacity limiter can be tested
 
         return response()->json($payload)
             ->header('X-Backend-Version', 'after')
             ->header('X-Backend-Cache', $payload['cached'] ? 'hit' : 'miss')
+            ->header('X-Request-Id', $requestId)
             ->header('Cache-Control', 'public, max-age=30');
     }
 
@@ -34,18 +39,20 @@ class AfterEcommerceController extends Controller
             'price' => ['required', 'numeric', 'min:0.01', 'max:999999.99'],
             'stock' => ['required', 'integer', 'min:0', 'max:100000'],
         ]);
-
+        $requestId = $this->requestId();
         return response()->json($this->service->createOptimizedProduct($data), 201)
-            ->header('X-Backend-Version', 'after');
+            ->header('X-Backend-Version', 'after')
+            ->header('X-Request-Id', $requestId);
     }
 
     public function orders(Request $request): JsonResponse
     {
         $payload = $this->service->optimizedOrders($this->limit($request, 100));
-
+        $requestId = $this->requestId();
         return response()->json($payload)
             ->header('X-Backend-Version', 'after')
-            ->header('X-Backend-Cache', $payload['cached'] ? 'hit' : 'miss');
+            ->header('X-Backend-Cache', $payload['cached'] ? 'hit' : 'miss')
+            ->header('X-Request-Id', $requestId);
     }
 
     public function createOrder(Request $request): JsonResponse
@@ -56,14 +63,16 @@ class AfterEcommerceController extends Controller
             'items.*.product_id' => ['required', 'integer', 'exists:products,id'],
             'items.*.quantity' => ['required', 'integer', 'min:1', 'max:100'],
         ]);
-
+        $requestId = $this->requestId();
         try {
             return response()->json($this->service->createOptimizedOrder($data), 201)
-                ->header('X-Backend-Version', 'after');
+                ->header('X-Backend-Version', 'after')
+                ->header('X-Request-Id', $requestId);
         } catch (LockTimeoutException | RuntimeException $exception) {
             return response()->json([
                 'message' => $exception->getMessage(),
-            ], 409)->header('X-Backend-Version', 'after');
+            ], 409)->header('X-Backend-Version', 'after')
+            ->header('X-Request-Id', $requestId);
         }
     }
 
@@ -74,5 +83,10 @@ class AfterEcommerceController extends Controller
         ])->validate();
 
         return (int) ($validated['limit'] ?? 20);
+    }
+
+    private function requestId(): string
+    {
+        return (string) str()->uuid();
     }
 }

@@ -8,7 +8,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Symfony\Component\HttpFoundation\Response;
 
-class RequestCorrelation
+class RequestCorrelationMiddleware
 {
     public function handle(Request $request, Closure $next): Response
     {

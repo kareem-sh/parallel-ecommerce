@@ -92,7 +92,7 @@ class EcommerceNfrService
     public function createOptimizedProduct(array $data): array
     {
         $started = microtime(true);
-        $product = DB::transaction(fn () => Product::create($data));
+        $product = DB::transaction(fn() => Product::create($data));
 
         $this->forgetProductCaches();
 
@@ -208,7 +208,7 @@ class EcommerceNfrService
     {
         $started = microtime(true);
         $productIds = collect($data['items'])->pluck('product_id')->sort()->values()->all();
-        $lock = Cache::lock('ecommerce:order:create:'.implode('-', $productIds), 10);
+        $lock = Cache::lock('ecommerce:order:create:' . implode('-', $productIds), 10);
 
         try {
             $order = $lock->block(5, function () use ($data) {
@@ -306,4 +306,37 @@ class EcommerceNfrService
     {
         return round((microtime(true) - $started) * 1000, 2);
     }
+    
+    public function processDailySalesReport(): array
+    {
+        $started = microtime(true);
+
+        $processed = 0;
+        $totalRevenue = 0;
+
+        Order::query()
+            ->with('items')
+            ->chunk(100, function ($orders) use (&$processed, &$totalRevenue) {
+
+                foreach ($orders as $order) {
+                    $processed++;
+
+                    $totalRevenue += $order->total;
+                }
+            });
+
+        Log::channel('nfr')->info('daily_sales_processed_in_chunks', [
+            'processed_orders' => $processed,
+            'total_revenue' => $totalRevenue,
+            'duration_ms' => $this->durationMs($started),
+        ]);
+
+        return [
+            'processed_orders' => $processed,
+            'total_revenue' => $totalRevenue,
+            'duration_ms' => $this->durationMs($started),
+            'solution' => 'Large datasets are processed in chunks to reduce memory usage.',
+        ];
+    }
 }
+
