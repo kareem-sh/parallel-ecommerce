@@ -42,10 +42,10 @@ storage/k6/results/<timestamp>/
 
 You can open each JSON file and compare metrics like:
 
-- `metrics.http_req_duration.values.avg`
-- `metrics.http_req_duration.values.p(95)`
-- `metrics.http_req_failed.values.rate`
-- `metrics.checks.values.rate`
+-   `metrics.http_req_duration.values.avg`
+-   `metrics.http_req_duration.values.p(95)`
+-   `metrics.http_req_failed.values.rate`
+-   `metrics.checks.values.rate`
 
 ## Requirement 1: Concurrent Access & Data Integrity
 
@@ -81,11 +81,11 @@ App\Services\EcommerceNfrService::createOptimizedOrder
 
 The new code uses:
 
-- Redis lock: `ecommerce:order:create:{productIds}`
-- `DB::transaction`
-- `lockForUpdate`
-- stock validation before decrement
-- safe `409 Conflict` when stock is not enough
+-   Redis lock: `ecommerce:order:create:{productIds}`
+-   `DB::transaction`
+-   `lockForUpdate`
+-   stock validation before decrement
+-   safe `409 Conflict` when stock is not enough
 
 Run new k6 test:
 
@@ -116,7 +116,7 @@ docker compose --profile test run --rm k6 run /scripts/req2-capacity-before.js -
 Solved by:
 
 ```text
-App\Http\Middleware\CapacityLimiter
+App\Http\Middleware\CapacityLimiterMiddleware
 ```
 
 Attached in:
