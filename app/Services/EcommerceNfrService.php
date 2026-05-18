@@ -92,7 +92,7 @@ class EcommerceNfrService
     public function createOptimizedProduct(array $data): array
     {
         $started = microtime(true);
-        $product = DB::transaction(fn () => Product::create($data));
+        $product = DB::transaction(fn() => Product::create($data));
 
         $this->forgetProductCaches();
 
@@ -208,7 +208,7 @@ class EcommerceNfrService
     {
         $started = microtime(true);
         $productIds = collect($data['items'])->pluck('product_id')->sort()->values()->all();
-        $lock = Cache::lock('ecommerce:order:create:'.implode('-', $productIds), 10);
+        $lock = Cache::lock('ecommerce:order:create:' . implode('-', $productIds), 10);
 
         try {
             $order = $lock->block(5, function () use ($data) {

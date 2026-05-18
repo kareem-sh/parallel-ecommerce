@@ -7,12 +7,12 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Symfony\Component\HttpFoundation\Response;
 
-class CapacityLimiter
+class CapacityLimiterMiddleWare
 {
     public function handle(Request $request, Closure $next, int $maxConcurrent = 20): Response
     {
         $key = 'capacity:api:active';
-        $lock = Cache::lock('lock:'.$key, 5);
+        $lock = Cache::lock('lock:' . $key, 5);
 
         $lock->block(2, function () use ($key, $maxConcurrent) {
             $active = (int) Cache::get($key, 0);
