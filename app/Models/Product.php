@@ -14,6 +14,7 @@ class Product extends Model
         'name',
         'price',
         'stock',
+        'stock_version',
     ];
 
     protected function casts(): array
@@ -21,6 +22,7 @@ class Product extends Model
         return [
             'price' => 'decimal:2',
             'stock' => 'integer',
+            'stock_version' => 'integer',
         ];
     }
 }

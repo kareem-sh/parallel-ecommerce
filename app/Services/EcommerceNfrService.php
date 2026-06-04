@@ -72,6 +72,67 @@ class EcommerceNfrService
         ];
     }
 
+    public function legacyHotProducts(int $limit): array
+    {
+        $started = microtime(true);
+
+        $products = Product::query()
+            ->orderByDesc('stock')
+            ->limit($limit)
+            ->get()
+            ->map(fn (Product $product) => $this->withSlowLegacyScore($product))
+            ->values()
+            ->all();
+
+        usleep(90000);
+
+        Log::channel('nfr')->warning('before_hot_products_loaded_without_distributed_cache', [
+            'limit' => $limit,
+            'duration_ms' => $this->durationMs($started),
+        ]);
+
+        return [
+            'version' => 'before',
+            'requirement' => 6,
+            'problem' => 'Hot products are read directly from the database every time.',
+            'cached' => false,
+            'duration_ms' => $this->durationMs($started),
+            'data' => $products,
+        ];
+    }
+
+    public function optimizedHotProducts(int $limit): array
+    {
+        $started = microtime(true);
+        $key = "ecommerce:hot-products:v1:limit:{$limit}";
+        $cached = Cache::has($key);
+
+        $products = Cache::remember($key, now()->addSeconds(60), function () use ($limit) {
+            return Product::query()
+                ->select(['id', 'sku', 'name', 'price', 'stock', 'stock_version', 'updated_at'])
+                ->orderByDesc('stock')
+                ->limit($limit)
+                ->get()
+                ->values()
+                ->all();
+        });
+
+        Log::channel('nfr')->info('after_hot_products_loaded_from_distributed_cache', [
+            'limit' => $limit,
+            'cached' => $cached,
+            'duration_ms' => $this->durationMs($started),
+        ]);
+
+        return [
+            'version' => 'after',
+            'requirement' => 6,
+            'solution' => 'Hot products are stored in Redis so repeated reads avoid direct database queries.',
+            'cached' => $cached,
+            'duration_ms' => $this->durationMs($started),
+            'data' => $products,
+        ];
+    }
+
     public function createLegacyProduct(array $data): array
     {
         $started = microtime(true);
@@ -105,6 +166,79 @@ class EcommerceNfrService
             'version' => 'after',
             'solution' => 'Product is validated, stored transactionally, and product cache is invalidated.',
             'data' => $product,
+        ];
+    }
+
+    public function legacyStockAdjustment(Product $product, int $delta): array
+    {
+        $started = microtime(true);
+        $originalStock = $product->stock;
+
+        usleep(80000);
+
+        $product->stock = $originalStock + $delta;
+        $product->save();
+
+        Log::channel('nfr')->warning('before_stock_adjusted_without_concurrency_control', [
+            'product_id' => $product->id,
+            'delta' => $delta,
+            'duration_ms' => $this->durationMs($started),
+        ]);
+
+        return [
+            'version' => 'before',
+            'requirement' => 7,
+            'problem' => 'Stock adjustment uses read-modify-write without optimistic or pessimistic locking.',
+            'locking' => 'none',
+            'data' => $product->fresh(),
+        ];
+    }
+
+    public function optimizedStockAdjustment(Product $product, int $delta, ?int $expectedVersion): array
+    {
+        $started = microtime(true);
+        $current = Product::query()->whereKey($product->id)->firstOrFail();
+
+        if ($expectedVersion !== null && $expectedVersion !== $current->stock_version) {
+            throw new RuntimeException('Inventory version conflict. Refresh product stock and retry.');
+        }
+
+        $query = Product::query()
+            ->whereKey($product->id)
+            ->where('stock_version', $current->stock_version);
+
+        if ($delta < 0) {
+            $query->where('stock', '>=', abs($delta));
+        }
+
+        $updated = $query->update([
+            'stock' => DB::raw('stock + ' . $delta),
+            'stock_version' => DB::raw('stock_version + 1'),
+            'updated_at' => now(),
+        ]);
+
+        if ($updated !== 1) {
+            throw new RuntimeException('Inventory update conflicted or stock is not enough.');
+        }
+
+        $fresh = $product->fresh();
+
+        $this->forgetProductCaches();
+        $this->forgetHotProductCaches();
+
+        Log::channel('nfr')->info('after_stock_adjusted_with_optimistic_locking', [
+            'product_id' => $product->id,
+            'delta' => $delta,
+            'stock_version' => $fresh->stock_version,
+            'duration_ms' => $this->durationMs($started),
+        ]);
+
+        return [
+            'version' => 'after',
+            'requirement' => 7,
+            'solution' => 'Stock adjustment uses optimistic locking through stock_version.',
+            'locking' => 'optimistic',
+            'data' => $fresh,
         ];
     }
 
@@ -270,6 +404,152 @@ class EcommerceNfrService
         ];
     }
 
+    public function legacyCheckoutWithPayment(array $data): array
+    {
+        $started = microtime(true);
+        $order = Order::create([
+            'customer_email' => $data['customer_email'],
+            'status' => 'created',
+            'total' => 0,
+        ]);
+
+        $total = 0;
+
+        foreach ($data['items'] as $item) {
+            $product = Product::findOrFail($item['product_id']);
+            $lineTotal = (float) $product->price * (int) $item['quantity'];
+            $total += $lineTotal;
+
+            $order->items()->create([
+                'product_id' => $product->id,
+                'quantity' => $item['quantity'],
+                'unit_price' => $product->price,
+                'line_total' => $lineTotal,
+            ]);
+
+            $product->decrement('stock', $item['quantity']);
+        }
+
+        $order->update(['total' => $total]);
+
+        if ($data['fail_payment'] ?? false) {
+            Log::channel('nfr')->warning('before_checkout_left_partial_state_after_payment_failure', [
+                'order_id' => $order->id,
+                'duration_ms' => $this->durationMs($started),
+            ]);
+
+            throw new RuntimeException('Payment failed after stock and order were already changed.');
+        }
+
+        $order->update([
+            'status' => 'paid',
+            'payment_reference' => 'legacy-pay-' . $order->id,
+            'paid_at' => now(),
+        ]);
+
+        return [
+            'version' => 'before',
+            'requirement' => 8,
+            'problem' => 'Checkout is not atomic, so payment failure can leave partial order and stock changes.',
+            'data' => $order->fresh()->load('items'),
+        ];
+    }
+
+    public function optimizedCheckoutWithPayment(array $data): array
+    {
+        $started = microtime(true);
+
+        $order = DB::transaction(function () use ($data) {
+            $order = Order::create([
+                'customer_email' => $data['customer_email'],
+                'status' => 'created',
+                'total' => 0,
+            ]);
+
+            $total = 0;
+
+            foreach ($data['items'] as $item) {
+                $product = Product::query()
+                    ->whereKey($item['product_id'])
+                    ->lockForUpdate()
+                    ->firstOrFail();
+
+                if ($product->stock < $item['quantity']) {
+                    throw new RuntimeException("Product {$product->id} does not have enough stock.");
+                }
+
+                $lineTotal = (float) $product->price * (int) $item['quantity'];
+                $total += $lineTotal;
+
+                $order->items()->create([
+                    'product_id' => $product->id,
+                    'quantity' => $item['quantity'],
+                    'unit_price' => $product->price,
+                    'line_total' => $lineTotal,
+                ]);
+
+                $product->decrement('stock', $item['quantity']);
+            }
+
+            if ($data['fail_payment'] ?? false) {
+                throw new RuntimeException('Payment failed; transaction rolled back.');
+            }
+
+            $order->update([
+                'status' => 'paid',
+                'total' => $total,
+                'payment_reference' => 'acid-pay-' . $order->id,
+                'paid_at' => now(),
+            ]);
+
+            return $order->load('items');
+        });
+
+        $this->forgetProductCaches();
+        $this->forgetHotProductCaches();
+        $this->forgetOrderCaches();
+
+        Log::channel('nfr')->info('after_checkout_committed_atomically', [
+            'order_id' => $order->id,
+            'duration_ms' => $this->durationMs($started),
+        ]);
+
+        return [
+            'version' => 'after',
+            'requirement' => 8,
+            'solution' => 'Payment, inventory update, and order creation are protected by one ACID transaction.',
+            'data' => $order,
+        ];
+    }
+
+    public function legacyBenchmarkProducts(int $limit): array
+    {
+        $payload = $this->legacyHotProducts($limit);
+
+        return [
+            'version' => 'before',
+            'requirement' => 10,
+            'operation' => 'hot-products',
+            'bottleneck' => 'Repeated direct database scan plus per-product recalculation.',
+            'duration_ms' => $payload['duration_ms'],
+            'cached' => false,
+        ];
+    }
+
+    public function optimizedBenchmarkProducts(int $limit): array
+    {
+        $payload = $this->optimizedHotProducts($limit);
+
+        return [
+            'version' => 'after',
+            'requirement' => 10,
+            'operation' => 'hot-products',
+            'bottleneck_removed' => 'Redis serves repeated hot-product reads instead of recalculating every request.',
+            'duration_ms' => $payload['duration_ms'],
+            'cached' => $payload['cached'],
+        ];
+    }
+
     private function withSlowLegacyScore(Product $product): array
     {
         $score = 0;
@@ -292,6 +572,13 @@ class EcommerceNfrService
     {
         foreach ([10, 20, 50, 100] as $limit) {
             Cache::forget("ecommerce:products:v1:limit:{$limit}");
+        }
+    }
+
+    private function forgetHotProductCaches(): void
+    {
+        foreach ([10, 20, 50, 100] as $limit) {
+            Cache::forget("ecommerce:hot-products:v1:limit:{$limit}");
         }
     }
 
@@ -339,4 +626,3 @@ class EcommerceNfrService
         ];
     }
 }
-

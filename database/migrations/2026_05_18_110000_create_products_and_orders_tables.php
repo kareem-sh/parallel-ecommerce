@@ -14,6 +14,7 @@ return new class extends Migration
             $table->string('name');
             $table->decimal('price', 10, 2);
             $table->integer('stock')->default(0);
+            $table->unsignedInteger('stock_version')->default(0);
             $table->timestamps();
         });
 
@@ -21,7 +22,9 @@ return new class extends Migration
             $table->id();
             $table->string('customer_email');
             $table->string('status')->default('created');
+            $table->string('payment_reference')->nullable();
             $table->decimal('total', 10, 2)->default(0);
+            $table->timestamp('paid_at')->nullable();
             $table->timestamps();
         });
 

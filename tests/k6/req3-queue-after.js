@@ -1,5 +1,9 @@
 import http from 'k6/http';
 import { check } from 'k6';
+import { Rate } from 'k6/metrics';
+import { baseUrl } from './lib/common.js';
+
+const queuedOrderRate = new Rate('queued_order_response_rate');
 
 export const options = {
   scenarios: {
@@ -9,9 +13,12 @@ export const options = {
       duration: '15s',
     },
   },
+  thresholds: {
+    checks: ['rate>0.95'],
+    http_req_duration: ['p(95)<1000'],
+    queued_order_response_rate: ['rate>0.80'],
+  },
 };
-
-const baseUrl = __ENV.BASE_URL || 'http://localhost:8000';
 
 export default function () {
   const response = http.post(`${baseUrl}/api/after/orders`, JSON.stringify({
@@ -20,6 +27,8 @@ export default function () {
   }), {
     headers: { 'Content-Type': 'application/json' },
   });
+
+  queuedOrderRate.add(response.status === 201);
 
   check(response, {
     'after returns while receipt job is queued': (r) => r.status === 201 || r.status === 409 || r.status === 422,

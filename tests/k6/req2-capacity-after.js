@@ -1,22 +1,32 @@
 import http from "k6/http";
 import { check } from "k6";
+import { Rate } from "k6/metrics";
+import { baseUrl } from "./lib/common.js";
+
+const capacityRejected = new Rate("capacity_rejected_rate");
 
 export const options = {
     scenarios: {
         guarded_after: {
-            executor: "constant-vus",
-            vus: 100, // 100 concurrent users
-            duration: "10s", // Run for 10 seconds
+            executor: "per-vu-iterations",
+            vus: 80,
+            iterations: 1,
+            maxDuration: "30s",
         },
+    },
+    thresholds: {
+        checks: ["rate>0.95"],
+        capacity_rejected_rate: ["rate>0"],
     },
 };
 
-const baseUrl = __ENV.BASE_URL || "http://localhost:8000";
-
 export default function () {
-    const response = http.get(`${baseUrl}/api/after/products?limit=50`);
+    const response = http.get(`${baseUrl}/api/after/products?limit=50&simulate_ms=400`, {
+        timeout: "15s",
+    });
 
-    // Track status codes
+    capacityRejected.add(response.status === 503);
+
     if (response.status === 503) {
         console.log(`503 received at ${new Date().toISOString()}`);
     }

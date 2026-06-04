@@ -13,13 +13,16 @@ class Order extends Model
     protected $fillable = [
         'customer_email',
         'status',
+        'payment_reference',
         'total',
+        'paid_at',
     ];
 
     protected function casts(): array
     {
         return [
             'total' => 'decimal:2',
+            'paid_at' => 'datetime',
         ];
     }
 

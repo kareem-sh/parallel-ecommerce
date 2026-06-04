@@ -1,5 +1,6 @@
 import http from 'k6/http';
 import { check } from 'k6';
+import { baseUrl, reportDate } from './lib/common.js';
 
 export const options = {
   scenarios: {
@@ -9,10 +10,12 @@ export const options = {
       duration: '15s',
     },
   },
+  thresholds: {
+    checks: ['rate>0.95'],
+  },
 };
 
-const baseUrl = __ENV.BASE_URL || 'http://localhost:8000';
-const date = __ENV.REPORT_DATE || '2026-05-18';
+const date = reportDate();
 
 export default function () {
   const response = http.get(`${baseUrl}/api/before/reports/daily-sales?date=${date}`);

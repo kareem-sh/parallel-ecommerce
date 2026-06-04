@@ -1,0 +1,103 @@
+{
+  "annotations": { "list": [] },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "id": null,
+  "links": [],
+  "panels": [
+    {
+      "datasource": { "type": "influxdb", "uid": null },
+      "fieldConfig": { "defaults": {}, "overrides": [] },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+      "id": 1,
+      "options": { "legend": { "displayMode": "list", "placement": "bottom" } },
+      "targets": [
+        {
+          "groupBy": [{ "params": ["$__interval"], "type": "time" }],
+          "measurement": "http_req_duration",
+          "policy": "default",
+          "refId": "A",
+          "select": [
+            [{ "params": ["value"], "type": "field" }],
+            [{ "params": [], "type": "mean" }]
+          ]
+        }
+      ],
+      "title": "HTTP Request Duration (mean)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "influxdb", "uid": null },
+      "fieldConfig": { "defaults": {}, "overrides": [] },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+      "id": 2,
+      "options": { "legend": { "displayMode": "list", "placement": "bottom" } },
+      "targets": [
+        {
+          "groupBy": [{ "params": ["$__interval"], "type": "time" }],
+          "measurement": "http_reqs",
+          "policy": "default",
+          "refId": "A",
+          "select": [
+            [{ "params": ["value"], "type": "field" }],
+            [{ "params": [], "type": "count" }]
+          ]
+        }
+      ],
+      "title": "HTTP Requests / second",
+      "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "influxdb", "uid": null },
+      "fieldConfig": { "defaults": {}, "overrides": [] },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+      "id": 3,
+      "options": { "legend": { "displayMode": "list", "placement": "bottom" } },
+      "targets": [
+        {
+          "groupBy": [{ "params": ["$__interval"], "type": "time" }],
+          "measurement": "http_req_failed",
+          "policy": "default",
+          "refId": "A",
+          "select": [
+            [{ "params": ["value"], "type": "field" }],
+            [{ "params": [], "type": "mean" }]
+          ]
+        }
+      ],
+      "title": "HTTP Failed Rate",
+      "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "influxdb", "uid": null },
+      "fieldConfig": { "defaults": {}, "overrides": [] },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
+      "id": 4,
+      "options": { "legend": { "displayMode": "list", "placement": "bottom" } },
+      "targets": [
+        {
+          "groupBy": [{ "params": ["$__interval"], "type": "time" }],
+          "measurement": "vus",
+          "policy": "default",
+          "refId": "A",
+          "select": [
+            [{ "params": ["value"], "type": "field" }],
+            [{ "params": [], "type": "mean" }]
+          ]
+        }
+      ],
+      "title": "Virtual Users",
+      "type": "timeseries"
+    }
+  ],
+  "refresh": "5s",
+  "schemaVersion": 39,
+  "tags": ["k6", "nfr"],
+  "templating": { "list": [] },
+  "time": { "from": "now-15m", "to": "now" },
+  "timezone": "browser",
+  "title": "k6 NFR Overview",
+  "uid": "k6-nfr-overview",
+  "version": 1
+}

@@ -1,5 +1,6 @@
 import http from 'k6/http';
 import { check } from 'k6';
+import { baseUrl } from './lib/common.js';
 
 export const options = {
   scenarios: {
@@ -10,8 +11,6 @@ export const options = {
     },
   },
 };
-
-const baseUrl = __ENV.BASE_URL || 'http://localhost:8000';
 
 export default function () {
   const response = http.get(`${baseUrl}/api/before/products?limit=50`);

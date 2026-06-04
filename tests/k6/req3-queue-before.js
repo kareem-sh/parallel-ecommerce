@@ -1,5 +1,6 @@
 import http from 'k6/http';
 import { check } from 'k6';
+import { baseUrl } from './lib/common.js';
 
 export const options = {
   scenarios: {
@@ -9,9 +10,10 @@ export const options = {
       duration: '15s',
     },
   },
+  thresholds: {
+    checks: ['rate>0.95'],
+  },
 };
-
-const baseUrl = __ENV.BASE_URL || 'http://localhost:8000';
 
 export default function () {
   const response = http.post(`${baseUrl}/api/before/orders`, JSON.stringify({

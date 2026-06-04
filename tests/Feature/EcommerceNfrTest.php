@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Jobs\SendOrderReceiptJob;
 use App\Models\DailySalesSummary;
+use App\Models\Order;
 use App\Models\Product;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Bus;
@@ -178,5 +179,140 @@ class EcommerceNfrTest extends TestCase
         $this->assertSame(2, $summary->items_sold);
         $this->assertSame('80.00', $summary->gross_sales);
         $this->assertSame(1, $summary->chunks_processed);
+    }
+
+    public function test_requirement_6_hot_products_use_distributed_cache_after_only(): void
+    {
+        Product::create([
+            'sku' => 'HOT-1',
+            'name' => 'Hot Product',
+            'price' => 99,
+            'stock' => 50,
+        ]);
+
+        $this->getJson('/api/before/hot-products?limit=10')
+            ->assertOk()
+            ->assertHeader('X-Backend-Version', 'before')
+            ->assertHeader('X-Backend-Cache', 'none')
+            ->assertJsonPath('requirement', 6)
+            ->assertJsonPath('cached', false);
+
+        $this->getJson('/api/after/hot-products?limit=10')
+            ->assertOk()
+            ->assertHeader('X-Backend-Version', 'after')
+            ->assertHeader('X-Backend-Cache', 'miss')
+            ->assertJsonPath('requirement', 6)
+            ->assertJsonPath('cached', false);
+
+        $this->getJson('/api/after/hot-products?limit=10')
+            ->assertOk()
+            ->assertHeader('X-Backend-Cache', 'hit')
+            ->assertJsonPath('cached', true);
+    }
+
+    public function test_requirement_7_after_stock_adjustment_rejects_stale_optimistic_lock_version(): void
+    {
+        $product = Product::create([
+            'sku' => 'LOCK-1',
+            'name' => 'Lock Product',
+            'price' => 10,
+            'stock' => 10,
+        ]);
+
+        $this->postJson("/api/before/products/{$product->id}/stock-adjust", [
+            'delta' => -1,
+        ])->assertOk()
+            ->assertJsonPath('requirement', 7)
+            ->assertJsonPath('locking', 'none');
+
+        $product->refresh();
+        $this->assertSame(9, $product->stock);
+        $this->assertSame(0, $product->stock_version);
+
+        $this->postJson("/api/after/products/{$product->id}/stock-adjust", [
+            'delta' => -2,
+            'expected_version' => 0,
+        ])->assertOk()
+            ->assertJsonPath('locking', 'optimistic')
+            ->assertJsonPath('data.stock', 7)
+            ->assertJsonPath('data.stock_version', 1);
+
+        $this->postJson("/api/after/products/{$product->id}/stock-adjust", [
+            'delta' => -1,
+            'expected_version' => 0,
+        ])->assertStatus(409)
+            ->assertJsonPath('requirement', 7);
+    }
+
+    public function test_requirement_8_after_checkout_rolls_back_payment_failure_atomically(): void
+    {
+        $beforeProduct = Product::create([
+            'sku' => 'ACID-BEFORE',
+            'name' => 'ACID Before',
+            'price' => 20,
+            'stock' => 5,
+        ]);
+
+        $this->postJson('/api/before/checkout', [
+            'customer_email' => 'buyer@example.com',
+            'fail_payment' => true,
+            'items' => [
+                ['product_id' => $beforeProduct->id, 'quantity' => 2],
+            ],
+        ])->assertStatus(402)
+            ->assertJsonPath('partial_state_possible', true);
+
+        $this->assertDatabaseHas('orders', [
+            'customer_email' => 'buyer@example.com',
+            'status' => 'created',
+        ]);
+        $this->assertSame(3, $beforeProduct->fresh()->stock);
+
+        $afterProduct = Product::create([
+            'sku' => 'ACID-AFTER',
+            'name' => 'ACID After',
+            'price' => 20,
+            'stock' => 5,
+        ]);
+
+        $ordersBefore = Order::query()->count();
+
+        $this->postJson('/api/after/checkout', [
+            'customer_email' => 'buyer2@example.com',
+            'fail_payment' => true,
+            'items' => [
+                ['product_id' => $afterProduct->id, 'quantity' => 2],
+            ],
+        ])->assertStatus(402)
+            ->assertJsonPath('rolled_back', true);
+
+        $this->assertSame($ordersBefore, Order::query()->count());
+        $this->assertSame(5, $afterProduct->fresh()->stock);
+    }
+
+    public function test_requirement_10_benchmark_reports_bottleneck_before_and_cache_after(): void
+    {
+        Product::create([
+            'sku' => 'BENCH-1',
+            'name' => 'Benchmark Product',
+            'price' => 30,
+            'stock' => 100,
+        ]);
+
+        $this->getJson('/api/before/benchmarks/products?limit=10')
+            ->assertOk()
+            ->assertHeader('X-Benchmark-Bottleneck', 'direct-database-scan')
+            ->assertJsonPath('requirement', 10)
+            ->assertJsonPath('cached', false);
+
+        $this->getJson('/api/after/benchmarks/products?limit=10')
+            ->assertOk()
+            ->assertHeader('X-Backend-Cache', 'miss')
+            ->assertJsonPath('requirement', 10);
+
+        $this->getJson('/api/after/benchmarks/products?limit=10')
+            ->assertOk()
+            ->assertHeader('X-Backend-Cache', 'hit')
+            ->assertJsonPath('cached', true);
     }
 }

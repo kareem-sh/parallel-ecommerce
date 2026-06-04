@@ -1,5 +1,6 @@
 import http from "k6/http";
 import { check } from "k6";
+import { baseUrl } from "./lib/common.js";
 
 export const options = {
     scenarios: {
@@ -9,10 +10,10 @@ export const options = {
             duration: "20s",
         },
     },
+    thresholds: {
+        checks: ["rate>0.95"],
+    },
 };
-
-// Use nginx service name (since K6 is on same Docker network)
-const baseUrl = __ENV.DIRECT_BASE_URL || "http://nginx:80";
 
 export default function () {
     const response = http.get(`${baseUrl}/api/before/products?limit=20`);

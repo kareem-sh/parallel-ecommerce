@@ -1,5 +1,6 @@
 import http from "k6/http";
 import { check } from "k6";
+import { baseUrl } from "./lib/common.js";
 
 export const options = {
     scenarios: {
@@ -10,12 +11,10 @@ export const options = {
         },
     },
     thresholds: {
-        http_req_failed: ["rate<0.05"],
+        checks: ["rate>0.95"],
         http_req_duration: ["p(95)<1000"],
     },
 };
-
-const baseUrl = __ENV.BASE_URL || "http://nginx:80";
 
 export default function () {
     const response = http.get(`${baseUrl}/api/after/products?limit=20`);
