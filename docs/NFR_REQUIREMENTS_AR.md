@@ -112,6 +112,8 @@ The result files will be saved under:
 storage/k6/<timestamp>/
 ```
 
+For a field-by-field explanation of the JSON summary (checks, metrics, thresholds, requirement 2 example), see [K6_RESULTS_GUIDE.md](./K6_RESULTS_GUIDE.md).
+
 You can open each JSON file and compare metrics like:
 
 -   `metrics.http_req_duration.values.avg`
@@ -214,6 +216,8 @@ routes/api.php
 ```
 
 The new path limits active concurrent API work. If capacity is full, it returns `503` intentionally instead of letting the server collapse.
+
+Admitted requests honor `simulate_ms` **inside the middleware** (before the controller runs) so the Redis counter stays elevated during k6 bursts and excess callers receive **`503`** instead of queue timeouts.
 
 **Infrastructure note:** see [§0.1 PHP-FPM pool](#01-infrastructure-nginx--php-fpm) — the FPM worker limit must be high enough that this middleware receives the burst; otherwise requests queue below Laravel and the k6 test times out instead of recording `503`.
 

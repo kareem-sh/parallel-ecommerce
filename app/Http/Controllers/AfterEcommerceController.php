@@ -22,8 +22,6 @@ class AfterEcommerceController extends Controller
             $this->limit($request, 100)
         );
 
-        $this->simulateWork($request);
-
         return response()->json($payload)
             ->header('X-Backend-Version', 'after')
             ->header('X-Backend-Cache', $payload['cached'] ? 'hit' : 'miss')
@@ -174,6 +172,6 @@ class AfterEcommerceController extends Controller
             return;
         }
 
-        usleep(min($milliseconds, 1000) * 1000);
+        usleep(min($milliseconds, 2000) * 1000);
     }
 }
