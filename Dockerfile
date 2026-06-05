@@ -12,6 +12,8 @@ RUN apt-get update \
 
 COPY --from=composer /usr/bin/composer /usr/bin/composer
 
+COPY docker/php-fpm/zzz-custom.conf /usr/local/etc/php-fpm.d/zzz-custom.conf
+
 WORKDIR /var/www/html
 
 COPY . .

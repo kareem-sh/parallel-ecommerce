@@ -1,15 +1,23 @@
 param(
     [Parameter(Mandatory = $true)]
-    [string] $Test
+    [string] $Test,
+
+    [switch] $Seed
 )
 
 $ErrorActionPreference = "Stop"
+
+if ($Seed) {
+    Write-Host "Seeding database ..."
+    docker compose exec app php artisan migrate --force | Out-Null
+    docker compose exec app php artisan db:seed --force | Out-Null
+}
 
 $scriptName = if ($Test.EndsWith(".js")) { $Test } else { "$Test.js" }
 $exportName = $scriptName -replace '\.js$', ''
 $timestamp = Get-Date -Format "yyyyMMdd-HHmmss"
 $reportDate = (Get-Date).ToUniversalTime().ToString("yyyy-MM-dd")
-$resultDir = "storage/k6/results/$timestamp"
+$resultDir = "storage/k6/$timestamp"
 New-Item -ItemType Directory -Force -Path $resultDir | Out-Null
 
 Write-Host "Running $scriptName (REPORT_DATE=$reportDate) ..."

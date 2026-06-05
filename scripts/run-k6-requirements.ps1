@@ -1,8 +1,12 @@
 $ErrorActionPreference = "Stop"
 
+Write-Host "Preparing database (migrate + seed) ..."
+docker compose exec app php artisan migrate --force | Out-Null
+docker compose exec app php artisan db:seed --force | Out-Null
+
 $timestamp = Get-Date -Format "yyyyMMdd-HHmmss"
 $reportDate = (Get-Date).ToUniversalTime().ToString("yyyy-MM-dd")
-$resultDir = "storage/k6/results/$timestamp"
+$resultDir = "storage/k6/$timestamp"
 New-Item -ItemType Directory -Force -Path $resultDir | Out-Null
 
 $tests = @(

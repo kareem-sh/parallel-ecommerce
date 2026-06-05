@@ -21,8 +21,8 @@ export const options = {
 };
 
 export default function () {
-    const response = http.get(`${baseUrl}/api/after/products?limit=50&simulate_ms=400`, {
-        timeout: "15s",
+    const response = http.get(`${baseUrl}/api/after/products?limit=50&simulate_ms=800`, {
+        timeout: "30s",
     });
 
     capacityRejected.add(response.status === 503);

@@ -20,10 +20,28 @@ export const options = {
   },
 };
 
-export default function () {
+export function setup() {
+  const unique = `${Date.now()}-${Math.floor(Math.random() * 100000)}`;
+  const response = http.post(`${baseUrl}/api/after/products`, JSON.stringify({
+    sku: `QUEUE-AFTER-${unique}`,
+    name: 'Queue Test After',
+    price: 10,
+    stock: 50000,
+  }), {
+    headers: { 'Content-Type': 'application/json' },
+  });
+
+  check(response, {
+    'queue-after product created': (r) => r.status === 201,
+  });
+
+  return { productId: response.json('data.id') };
+}
+
+export default function (data) {
   const response = http.post(`${baseUrl}/api/after/orders`, JSON.stringify({
     customer_email: `async-${__VU}-${__ITER}@example.com`,
-    items: [{ product_id: 2, quantity: 1 }],
+    items: [{ product_id: data.productId, quantity: 1 }],
   }), {
     headers: { 'Content-Type': 'application/json' },
   });

@@ -26,6 +26,78 @@ docker compose exec app php artisan db:seed --force
 
 Seed data includes products and daily orders so the batch report has data to process.
 
+## 0.1 Infrastructure: Nginx & PHP-FPM
+
+Two Docker config files sit **outside** Laravel but are required for several NFR demos to behave correctly under load. Without them, k6 tests can time out or pass for the wrong reason (queueing at PHP-FPM instead of intentional application-level rejection or load balancing).
+
+### `docker/nginx.conf` — Requirement 5 (Load Distribution)
+
+Nginx is the single public entry point (`localhost:8000`). It defines an upstream pool with **two** PHP-FPM backends:
+
+```nginx
+upstream ecommerce_backend {
+    least_conn;
+    server app:9000;
+    server app2:9000;
+}
+```
+
+| Setting | Role in the project |
+|--------|---------------------|
+| **Two servers (`app`, `app2`)** | Before path uses one logical backend; after path runs two identical Laravel containers so traffic can be spread across instances. |
+| **`least_conn`** | Sends each new request to the worker with the **fewest active connections**. E-commerce requests have uneven duration (cache hit vs miss, orders vs reads), so this is more stable than round-robin for Requirement 5. |
+| **`fastcgi_pass ecommerce_backend`** | All `/api/*` PHP requests go through the pool, not a single container. |
+| **`fastcgi_keep_conn on`** | Reuses connections to PHP-FPM under sustained k6 load (`req5-load-after`, `req9-stress-after`). |
+| **`fastcgi_buffering off`** | Reduces latency for long-running demo requests (e.g. `simulate_ms` in capacity tests). |
+
+**Which tests prove it**
+
+- `req5-load-before.js` — hits `/api/before/products` (single-app behavior baseline).
+- `req5-load-after.js` — hits `/api/after/products` through Nginx; both `app` and `app2` serve traffic.
+
+**Without this file:** only one PHP container would receive traffic; Requirement 5 could not be demonstrated as load distribution across multiple app instances.
+
+---
+
+### `docker/php-fpm/zzz-custom.conf` — Requirement 2 (Capacity Control)
+
+PHP-FPM’s default pool is small (often ~5 workers). That creates a **hidden queue** in front of Laravel:
+
+1. k6 sends 80 concurrent requests (`req2-capacity-after.js`).
+2. Only ~5 enter PHP at a time; the rest wait in FPM/nginx.
+3. `CapacityLimiterMiddleware` never sees the full burst → requests **time out** instead of receiving intentional **`503`** responses.
+
+This pool config raises concurrency so requests reach Laravel quickly and the **application** capacity guard can work:
+
+```ini
+pm = dynamic
+pm.max_children = 50
+pm.start_servers = 10
+pm.min_spare_servers = 5
+pm.max_spare_servers = 20
+pm.max_requests = 500
+```
+
+| Setting | Role in the project |
+|--------|---------------------|
+| **`pm.max_children = 50`** | Enough workers per container so a burst can enter PHP while others hold slots with `simulate_ms=800`. |
+| **`pm.start_servers` / spare settings** | Warm pool ready when k6 starts; avoids cold-start queueing that would skew capacity metrics. |
+| **`pm.max_requests = 500`** | Recycles workers during long test sessions to limit memory drift. |
+
+**Which tests prove it**
+
+- **`req2-capacity-after.js`** (primary) — expects `capacity_rejected_rate > 0` and fast **`503`** from `CapacityLimiterMiddleware`, not 15s timeouts.
+- **`req5-load-after.js`**, **`req9-stress-after.js`** — benefit from a larger pool so failures reflect app behavior, not FPM starvation.
+
+**How it is loaded**
+
+- Baked into the image via `Dockerfile` (`COPY docker/php-fpm/zzz-custom.conf …`).
+- Mounted at runtime in `docker-compose.yml` so pool changes apply without rebuild.
+
+**Without this file:** Requirement 2’s after test would not reliably show Redis-backed capacity rejection; the bottleneck would be PHP-FPM, not `CapacityLimiterMiddleware`.
+
+---
+
 ## 1. Save k6 Results to Files
 
 Run all before/after k6 tests and save JSON summaries:
@@ -37,7 +109,7 @@ Run all before/after k6 tests and save JSON summaries:
 The result files will be saved under:
 
 ```text
-storage/k6/results/<timestamp>/
+storage/k6/<timestamp>/
 ```
 
 You can open each JSON file and compare metrics like:
@@ -142,6 +214,8 @@ routes/api.php
 ```
 
 The new path limits active concurrent API work. If capacity is full, it returns `503` intentionally instead of letting the server collapse.
+
+**Infrastructure note:** see [§0.1 PHP-FPM pool](#01-infrastructure-nginx--php-fpm) — the FPM worker limit must be high enough that this middleware receives the burst; otherwise requests queue below Laravel and the k6 test times out instead of recording `503`.
 
 Run new k6 test:
 
@@ -305,6 +379,8 @@ least_conn;
 ```
 
 Why `least_conn`: e-commerce requests do not all take the same time, so sending a new request to the server with fewer active connections is better than simple round-robin.
+
+**Infrastructure note:** see [§0.1 Nginx upstream](#01-infrastructure-nginx--php-fpm) for how `upstream`, `least_conn`, and `fastcgi_pass` wire both containers into one load-balanced entry point.
 
 Run new k6 test:
 

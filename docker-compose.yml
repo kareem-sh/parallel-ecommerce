@@ -18,6 +18,10 @@ x-app-common: &app-common
     LOG_STACK: ${DOCKER_LOG_STACK:-single,stderr}
   volumes:
     - ./storage:/var/www/html/storage
+    - ./app:/var/www/html/app:ro
+    - ./routes:/var/www/html/routes:ro
+    - ./tests:/var/www/html/tests:ro
+    - ./docker/php-fpm/zzz-custom.conf:/usr/local/etc/php-fpm.d/zzz-custom.conf:ro
   networks:
     - ecommerce-network
 

@@ -18,6 +18,7 @@
 /public/storage
 /storage/*.key
 /storage/pail
+/storage/k6/20*
 /vendor
 Homestead.json
 Homestead.yaml
