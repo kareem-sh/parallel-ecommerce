@@ -7,7 +7,8 @@ This is the file to use when you present the project. It shows how to run the ba
 Run the full stack:
 
 ```bash
-docker compose up --build -d nginx app app2 worker mysql redis
+docker compose build
+docker compose up -d
 ```
 
 Check services:
@@ -42,13 +43,13 @@ upstream ecommerce_backend {
 }
 ```
 
-| Setting | Role in the project |
-|--------|---------------------|
-| **Two servers (`app`, `app2`)** | Before path uses one logical backend; after path runs two identical Laravel containers so traffic can be spread across instances. |
-| **`least_conn`** | Sends each new request to the worker with the **fewest active connections**. E-commerce requests have uneven duration (cache hit vs miss, orders vs reads), so this is more stable than round-robin for Requirement 5. |
-| **`fastcgi_pass ecommerce_backend`** | All `/api/*` PHP requests go through the pool, not a single container. |
-| **`fastcgi_keep_conn on`** | Reuses connections to PHP-FPM under sustained k6 load (`req5-load-after`, `req9-stress-after`). |
-| **`fastcgi_buffering off`** | Reduces latency for long-running demo requests (e.g. `simulate_ms` in capacity tests). |
+| Setting                              | Role in the project                                                                                                                                                                                                    |
+| ------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Two servers (`app`, `app2`)**      | Before path uses one logical backend; after path runs two identical Laravel containers so traffic can be spread across instances.                                                                                      |
+| **`least_conn`**                     | Sends each new request to the worker with the **fewest active connections**. E-commerce requests have uneven duration (cache hit vs miss, orders vs reads), so this is more stable than round-robin for Requirement 5. |
+| **`fastcgi_pass ecommerce_backend`** | All `/api/*` PHP requests go through the pool, not a single container.                                                                                                                                                 |
+| **`fastcgi_keep_conn on`**           | Reuses connections to PHP-FPM under sustained k6 load (`req5-load-after`, `req9-stress-after`).                                                                                                                        |
+| **`fastcgi_buffering off`**          | Reduces latency for long-running demo requests (e.g. `simulate_ms` in capacity tests).                                                                                                                                 |
 
 **Which tests prove it**
 
@@ -78,11 +79,11 @@ pm.max_spare_servers = 20
 pm.max_requests = 500
 ```
 
-| Setting | Role in the project |
-|--------|---------------------|
-| **`pm.max_children = 50`** | Enough workers per container so a burst can enter PHP while others hold slots with `simulate_ms=800`. |
-| **`pm.start_servers` / spare settings** | Warm pool ready when k6 starts; avoids cold-start queueing that would skew capacity metrics. |
-| **`pm.max_requests = 500`** | Recycles workers during long test sessions to limit memory drift. |
+| Setting                                 | Role in the project                                                                                   |
+| --------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| **`pm.max_children = 50`**              | Enough workers per container so a burst can enter PHP while others hold slots with `simulate_ms=800`. |
+| **`pm.start_servers` / spare settings** | Warm pool ready when k6 starts; avoids cold-start queueing that would skew capacity metrics.          |
+| **`pm.max_requests = 500`**             | Recycles workers during long test sessions to limit memory drift.                                     |
 
 **Which tests prove it**
 
@@ -116,18 +117,18 @@ For a field-by-field explanation of the JSON summary (checks, metrics, threshold
 
 You can open each JSON file and compare metrics like:
 
--   `metrics.http_req_duration.values.avg`
--   `metrics.http_req_duration.values.p(95)`
--   `metrics.http_req_failed.values.rate`
--   `metrics.checks.values.rate`
+- `metrics.http_req_duration.values.avg`
+- `metrics.http_req_duration.values.p(95)`
+- `metrics.http_req_failed.values.rate`
+- `metrics.checks.values.rate`
 
 Extra custom k6 metrics added for the presentation:
 
--   Requirement 1 before: `orders_accepted_without_stock_guard` and `accepted_rate`
--   Requirement 1 after: `orders_accepted_with_stock_guard`, `orders_safely_rejected`, and `safe_rejected_rate`
--   Requirement 2 after: `capacity_rejected_rate`
--   Requirement 3 after: `queued_order_response_rate`
--   Requirement 4 after: `report_queued_rate`
+- Requirement 1 before: `orders_accepted_without_stock_guard` and `accepted_rate`
+- Requirement 1 after: `orders_accepted_with_stock_guard`, `orders_safely_rejected`, and `safe_rejected_rate`
+- Requirement 2 after: `capacity_rejected_rate`
+- Requirement 3 after: `queued_order_response_rate`
+- Requirement 4 after: `report_queued_rate`
 
 How to observe the before/after difference:
 
@@ -171,11 +172,11 @@ App\Services\EcommerceNfrService::createOptimizedOrder
 
 The new code uses:
 
--   Redis lock: `ecommerce:order:create:{productIds}`
--   `DB::transaction`
--   `lockForUpdate`
--   stock validation before decrement
--   safe `409 Conflict` when stock is not enough
+- Redis lock: `ecommerce:order:create:{productIds}`
+- `DB::transaction`
+- `lockForUpdate`
+- stock validation before decrement
+- safe `409 Conflict` when stock is not enough
 
 Run new k6 test:
 

@@ -1,103 +1,493 @@
 {
-  "annotations": { "list": [] },
-  "editable": true,
-  "fiscalYearStartMonth": 0,
-  "graphTooltip": 0,
-  "id": null,
-  "links": [],
-  "panels": [
-    {
-      "datasource": { "type": "influxdb", "uid": null },
-      "fieldConfig": { "defaults": {}, "overrides": [] },
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
-      "id": 1,
-      "options": { "legend": { "displayMode": "list", "placement": "bottom" } },
-      "targets": [
-        {
-          "groupBy": [{ "params": ["$__interval"], "type": "time" }],
-          "measurement": "http_req_duration",
-          "policy": "default",
-          "refId": "A",
-          "select": [
-            [{ "params": ["value"], "type": "field" }],
-            [{ "params": [], "type": "mean" }]
-          ]
-        }
-      ],
-      "title": "HTTP Request Duration (mean)",
-      "type": "timeseries"
+    "annotations": {
+        "list": [
+            {
+                "builtIn": 1,
+                "datasource": {
+                    "type": "grafana",
+                    "uid": "-- Grafana --"
+                },
+                "enable": true,
+                "hide": true,
+                "iconColor": "rgba(0, 211, 255, 1)",
+                "name": "Annotations & Alerts",
+                "type": "dashboard"
+            }
+        ]
     },
-    {
-      "datasource": { "type": "influxdb", "uid": null },
-      "fieldConfig": { "defaults": {}, "overrides": [] },
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
-      "id": 2,
-      "options": { "legend": { "displayMode": "list", "placement": "bottom" } },
-      "targets": [
+    "editable": true,
+    "fiscalYearStartMonth": 0,
+    "graphTooltip": 0,
+    "id": 2,
+    "links": [],
+    "panels": [
         {
-          "groupBy": [{ "params": ["$__interval"], "type": "time" }],
-          "measurement": "http_reqs",
-          "policy": "default",
-          "refId": "A",
-          "select": [
-            [{ "params": ["value"], "type": "field" }],
-            [{ "params": [], "type": "count" }]
-          ]
+            "datasource": {
+                "type": "influxdb"
+            },
+            "fieldConfig": {
+                "defaults": {
+                    "color": {
+                        "mode": "palette-classic"
+                    },
+                    "custom": {
+                        "axisBorderShow": false,
+                        "axisCenteredZero": false,
+                        "axisColorMode": "text",
+                        "axisLabel": "",
+                        "axisPlacement": "auto",
+                        "barAlignment": 0,
+                        "barWidthFactor": 0.6,
+                        "drawStyle": "line",
+                        "fillOpacity": 0,
+                        "gradientMode": "none",
+                        "hideFrom": {
+                            "legend": false,
+                            "tooltip": false,
+                            "viz": false
+                        },
+                        "insertNulls": false,
+                        "lineInterpolation": "linear",
+                        "lineWidth": 1,
+                        "pointSize": 5,
+                        "scaleDistribution": {
+                            "type": "linear"
+                        },
+                        "showPoints": "auto",
+                        "spanNulls": false,
+                        "stacking": {
+                            "group": "A",
+                            "mode": "none"
+                        },
+                        "thresholdsStyle": {
+                            "mode": "off"
+                        }
+                    },
+                    "mappings": [],
+                    "thresholds": {
+                        "mode": "absolute",
+                        "steps": [
+                            {
+                                "color": "green",
+                                "value": null
+                            },
+                            {
+                                "color": "red",
+                                "value": 80
+                            }
+                        ]
+                    }
+                },
+                "overrides": []
+            },
+            "gridPos": {
+                "h": 8,
+                "w": 12,
+                "x": 0,
+                "y": 0
+            },
+            "id": 1,
+            "options": {
+                "legend": {
+                    "calcs": [],
+                    "displayMode": "list",
+                    "placement": "bottom",
+                    "showLegend": true
+                },
+                "tooltip": {
+                    "mode": "single",
+                    "sort": "none"
+                }
+            },
+            "pluginVersion": "11.4.0",
+            "targets": [
+                {
+                    "groupBy": [
+                        {
+                            "params": ["$__interval"],
+                            "type": "time"
+                        }
+                    ],
+                    "hide": false,
+                    "measurement": "http_req_duration",
+                    "orderByTime": "ASC",
+                    "policy": "default",
+                    "query": "SELECT mean(\"value\")\nFROM \"http_req_duration\"\nWHERE $timeFilter\nGROUP BY time($__interval)",
+                    "rawQuery": true,
+                    "refId": "A",
+                    "resultFormat": "time_series",
+                    "select": [
+                        [
+                            {
+                                "params": ["value"],
+                                "type": "field"
+                            }
+                        ],
+                        [
+                            {
+                                "params": [],
+                                "type": "mean"
+                            }
+                        ]
+                    ],
+                    "tags": []
+                }
+            ],
+            "title": "HTTP Request Duration (mean)",
+            "type": "timeseries"
+        },
+        {
+            "datasource": {
+                "type": "influxdb"
+            },
+            "fieldConfig": {
+                "defaults": {
+                    "color": {
+                        "mode": "palette-classic"
+                    },
+                    "custom": {
+                        "axisBorderShow": false,
+                        "axisCenteredZero": false,
+                        "axisColorMode": "text",
+                        "axisLabel": "",
+                        "axisPlacement": "auto",
+                        "barAlignment": 0,
+                        "barWidthFactor": 0.6,
+                        "drawStyle": "line",
+                        "fillOpacity": 0,
+                        "gradientMode": "none",
+                        "hideFrom": {
+                            "legend": false,
+                            "tooltip": false,
+                            "viz": false
+                        },
+                        "insertNulls": false,
+                        "lineInterpolation": "linear",
+                        "lineWidth": 1,
+                        "pointSize": 5,
+                        "scaleDistribution": {
+                            "type": "linear"
+                        },
+                        "showPoints": "auto",
+                        "spanNulls": false,
+                        "stacking": {
+                            "group": "A",
+                            "mode": "none"
+                        },
+                        "thresholdsStyle": {
+                            "mode": "off"
+                        }
+                    },
+                    "mappings": [],
+                    "thresholds": {
+                        "mode": "absolute",
+                        "steps": [
+                            {
+                                "color": "green",
+                                "value": null
+                            },
+                            {
+                                "color": "red",
+                                "value": 80
+                            }
+                        ]
+                    }
+                },
+                "overrides": []
+            },
+            "gridPos": {
+                "h": 8,
+                "w": 12,
+                "x": 12,
+                "y": 0
+            },
+            "id": 2,
+            "options": {
+                "legend": {
+                    "calcs": [],
+                    "displayMode": "list",
+                    "placement": "bottom",
+                    "showLegend": true
+                },
+                "tooltip": {
+                    "mode": "single",
+                    "sort": "none"
+                }
+            },
+            "pluginVersion": "11.4.0",
+            "targets": [
+                {
+                    "groupBy": [
+                        {
+                            "params": ["$__interval"],
+                            "type": "time"
+                        }
+                    ],
+                    "measurement": "http_reqs",
+                    "policy": "default",
+                    "query": "SELECT count(\"value\")\nFROM \"http_reqs\"\nWHERE $timeFilter\nGROUP BY time($__interval)",
+                    "rawQuery": true,
+                    "refId": "A",
+                    "resultFormat": "time_series",
+                    "select": [
+                        [
+                            {
+                                "params": ["value"],
+                                "type": "field"
+                            }
+                        ],
+                        [
+                            {
+                                "params": [],
+                                "type": "count"
+                            }
+                        ]
+                    ]
+                }
+            ],
+            "title": "HTTP Requests / second",
+            "type": "timeseries"
+        },
+        {
+            "datasource": {
+                "type": "influxdb"
+            },
+            "fieldConfig": {
+                "defaults": {
+                    "color": {
+                        "mode": "palette-classic"
+                    },
+                    "custom": {
+                        "axisBorderShow": false,
+                        "axisCenteredZero": false,
+                        "axisColorMode": "text",
+                        "axisLabel": "",
+                        "axisPlacement": "auto",
+                        "barAlignment": 0,
+                        "barWidthFactor": 0.6,
+                        "drawStyle": "line",
+                        "fillOpacity": 0,
+                        "gradientMode": "none",
+                        "hideFrom": {
+                            "legend": false,
+                            "tooltip": false,
+                            "viz": false
+                        },
+                        "insertNulls": false,
+                        "lineInterpolation": "linear",
+                        "lineWidth": 1,
+                        "pointSize": 5,
+                        "scaleDistribution": {
+                            "type": "linear"
+                        },
+                        "showPoints": "auto",
+                        "spanNulls": false,
+                        "stacking": {
+                            "group": "A",
+                            "mode": "none"
+                        },
+                        "thresholdsStyle": {
+                            "mode": "off"
+                        }
+                    },
+                    "mappings": [],
+                    "thresholds": {
+                        "mode": "absolute",
+                        "steps": [
+                            {
+                                "color": "green",
+                                "value": null
+                            },
+                            {
+                                "color": "red",
+                                "value": 80
+                            }
+                        ]
+                    }
+                },
+                "overrides": []
+            },
+            "gridPos": {
+                "h": 8,
+                "w": 12,
+                "x": 0,
+                "y": 8
+            },
+            "id": 3,
+            "options": {
+                "legend": {
+                    "calcs": [],
+                    "displayMode": "list",
+                    "placement": "bottom",
+                    "showLegend": true
+                },
+                "tooltip": {
+                    "mode": "single",
+                    "sort": "none"
+                }
+            },
+            "pluginVersion": "11.4.0",
+            "targets": [
+                {
+                    "groupBy": [
+                        {
+                            "params": ["$__interval"],
+                            "type": "time"
+                        }
+                    ],
+                    "measurement": "http_req_failed",
+                    "policy": "default",
+                    "query": "SELECT mean(\"value\")\nFROM \"http_req_failed\"\nWHERE $timeFilter\nGROUP BY time($__interval)",
+                    "rawQuery": true,
+                    "refId": "A",
+                    "resultFormat": "time_series",
+                    "select": [
+                        [
+                            {
+                                "params": ["value"],
+                                "type": "field"
+                            }
+                        ],
+                        [
+                            {
+                                "params": [],
+                                "type": "mean"
+                            }
+                        ]
+                    ]
+                }
+            ],
+            "title": "HTTP Failed Rate (mean)",
+            "type": "timeseries"
+        },
+        {
+            "datasource": {
+                "type": "influxdb"
+            },
+            "fieldConfig": {
+                "defaults": {
+                    "color": {
+                        "mode": "palette-classic"
+                    },
+                    "custom": {
+                        "axisBorderShow": false,
+                        "axisCenteredZero": false,
+                        "axisColorMode": "text",
+                        "axisLabel": "",
+                        "axisPlacement": "auto",
+                        "barAlignment": 0,
+                        "barWidthFactor": 0.6,
+                        "drawStyle": "line",
+                        "fillOpacity": 0,
+                        "gradientMode": "none",
+                        "hideFrom": {
+                            "legend": false,
+                            "tooltip": false,
+                            "viz": false
+                        },
+                        "insertNulls": false,
+                        "lineInterpolation": "linear",
+                        "lineWidth": 1,
+                        "pointSize": 5,
+                        "scaleDistribution": {
+                            "type": "linear"
+                        },
+                        "showPoints": "auto",
+                        "spanNulls": false,
+                        "stacking": {
+                            "group": "A",
+                            "mode": "none"
+                        },
+                        "thresholdsStyle": {
+                            "mode": "off"
+                        }
+                    },
+                    "mappings": [],
+                    "thresholds": {
+                        "mode": "absolute",
+                        "steps": [
+                            {
+                                "color": "green",
+                                "value": null
+                            },
+                            {
+                                "color": "red",
+                                "value": 80
+                            }
+                        ]
+                    }
+                },
+                "overrides": []
+            },
+            "gridPos": {
+                "h": 8,
+                "w": 12,
+                "x": 12,
+                "y": 8
+            },
+            "id": 4,
+            "options": {
+                "legend": {
+                    "calcs": [],
+                    "displayMode": "list",
+                    "placement": "bottom",
+                    "showLegend": true
+                },
+                "tooltip": {
+                    "mode": "single",
+                    "sort": "none"
+                }
+            },
+            "pluginVersion": "11.4.0",
+            "targets": [
+                {
+                    "groupBy": [
+                        {
+                            "params": ["$__interval"],
+                            "type": "time"
+                        }
+                    ],
+                    "measurement": "vus",
+                    "policy": "default",
+                    "query": "SELECT mean(\"value\")\nFROM \"vus\"\nWHERE $timeFilter\nGROUP BY time($__interval)",
+                    "rawQuery": true,
+                    "refId": "A",
+                    "resultFormat": "time_series",
+                    "select": [
+                        [
+                            {
+                                "params": ["value"],
+                                "type": "field"
+                            }
+                        ],
+                        [
+                            {
+                                "params": [],
+                                "type": "mean"
+                            }
+                        ]
+                    ]
+                }
+            ],
+            "title": "Virtual Users (mean)",
+            "type": "timeseries"
         }
-      ],
-      "title": "HTTP Requests / second",
-      "type": "timeseries"
+    ],
+    "preload": false,
+    "refresh": "5s",
+    "schemaVersion": 40,
+    "tags": ["k6", "nfr"],
+    "templating": {
+        "list": []
     },
-    {
-      "datasource": { "type": "influxdb", "uid": null },
-      "fieldConfig": { "defaults": {}, "overrides": [] },
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
-      "id": 3,
-      "options": { "legend": { "displayMode": "list", "placement": "bottom" } },
-      "targets": [
-        {
-          "groupBy": [{ "params": ["$__interval"], "type": "time" }],
-          "measurement": "http_req_failed",
-          "policy": "default",
-          "refId": "A",
-          "select": [
-            [{ "params": ["value"], "type": "field" }],
-            [{ "params": [], "type": "mean" }]
-          ]
-        }
-      ],
-      "title": "HTTP Failed Rate",
-      "type": "timeseries"
+    "time": {
+        "from": "now-15m",
+        "to": "now"
     },
-    {
-      "datasource": { "type": "influxdb", "uid": null },
-      "fieldConfig": { "defaults": {}, "overrides": [] },
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
-      "id": 4,
-      "options": { "legend": { "displayMode": "list", "placement": "bottom" } },
-      "targets": [
-        {
-          "groupBy": [{ "params": ["$__interval"], "type": "time" }],
-          "measurement": "vus",
-          "policy": "default",
-          "refId": "A",
-          "select": [
-            [{ "params": ["value"], "type": "field" }],
-            [{ "params": [], "type": "mean" }]
-          ]
-        }
-      ],
-      "title": "Virtual Users",
-      "type": "timeseries"
-    }
-  ],
-  "refresh": "5s",
-  "schemaVersion": 39,
-  "tags": ["k6", "nfr"],
-  "templating": { "list": [] },
-  "time": { "from": "now-15m", "to": "now" },
-  "timezone": "browser",
-  "title": "k6 NFR Overview",
-  "uid": "k6-nfr-overview",
-  "version": 1
+    "timepicker": {},
+    "timezone": "browser",
+    "title": "k6 NFR Overview",
+    "uid": "k6-nfr-overview",
+    "version": 1,
+    "weekStart": ""
 }

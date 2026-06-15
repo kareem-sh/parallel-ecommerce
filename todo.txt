@@ -1,0 +1,42 @@
+docker/grafana/dashboards/k6-nfr-overview.json
+right now i have 4 panels 3 of them use mean so you must add other metrics that really matter
+beside panel 1 that uses mean add Avg, P95, P99, Max panels
+for panel 2 it shows requests per interval but i want requests / second so fix that
+for panel 3 improve it by multiplying with 100 and setting Grafana Unit: Percent (0-100)
+for panel 4 add max so i have the full picture in case i got 100, 100, 100, 10 i see the bottlenecks
+add
+1. P95 Response Time
+2. P99 Response Time
+3. Max Response Time
+4. Iteration Duration
+5. Dropped Iterations
+6. Checks Success Rate
+
+so finally i have this in my dashboard
+
+1. Average Response Time
+2. P95 Response Time
+3. P99 Response Time
+4. Max Response Time
+5. Requests Per Second (RPS)
+6. Total Requests
+7. Active Virtual Users
+8. Maximum Configured VUs
+9. Error Rate %
+10. Successful Checks %
+11. Dropped Iterations
+12. Iteration Duration Mean
+13. Iteration Duration P95
+
+===============================================================================
+
+POST /api/before/products/{id}/stock-adjust
+this endpoint must use distributed locks so use them instead of optimistic locking
+and update the k6 test related to it to be suitable to
+
+===============================================================================
+
+Add
+error.logs & success.logs
+error.logs must contain all the error logging
+success.logs must contain all the success logging

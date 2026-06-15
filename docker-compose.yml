@@ -46,7 +46,12 @@ services:
 
   worker:
     <<: *app-common
-    command: ["sh", "-c", "php artisan queue:work redis --queue=receipts,reports,default --sleep=1 --tries=3 --timeout=60"]
+    command:
+      [
+        "sh",
+        "-c",
+        "php artisan queue:work redis --queue=receipts,reports,default --sleep=1 --tries=3 --timeout=60",
+      ]
     depends_on:
       app:
         condition: service_started
@@ -72,13 +77,17 @@ services:
       MYSQL_DATABASE: ${DB_DATABASE}
       MYSQL_USER: ${DB_USERNAME}
       MYSQL_PASSWORD: ${DB_PASSWORD}
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root_secret}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
     ports:
       - "${DOCKER_MYSQL_PORT:-3306}:3306"
     volumes:
       - mysql-data:/var/lib/mysql
     healthcheck:
-      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -u${DB_USERNAME} -p${DB_PASSWORD} --silent"]
+      test:
+        [
+          "CMD-SHELL",
+          "mysqladmin ping -h 127.0.0.1 -u${DB_USERNAME} -p${DB_PASSWORD} --silent",
+        ]
       interval: 5s
       timeout: 5s
       retries: 20
@@ -87,7 +96,16 @@ services:
 
   redis:
     image: redis:7-alpine
-    command: ["redis-server", "--appendonly", "yes", "--maxmemory", "128mb", "--maxmemory-policy", "allkeys-lru"]
+    command:
+      [
+        "redis-server",
+        "--appendonly",
+        "yes",
+        "--maxmemory",
+        "128mb",
+        "--maxmemory-policy",
+        "allkeys-lru",
+      ]
     ports:
       - "${DOCKER_REDIS_PORT:-6379}:6379"
     volumes:
@@ -105,6 +123,7 @@ services:
     profiles: ["test"]
     environment:
       BASE_URL: ${K6_BASE_URL:-http://nginx:80}
+      K6_OUT: influxdb=http://influxdb:8086/k6
     volumes:
       - ./tests/k6:/scripts
       - ./storage/k6:/results
@@ -118,7 +137,6 @@ services:
 
   influxdb:
     image: influxdb:1.8
-    profiles: ["observability"]
     ports:
       - "${DOCKER_INFLUXDB_PORT:-8086}:8086"
     environment:
@@ -131,7 +149,6 @@ services:
 
   grafana:
     image: grafana/grafana:11.4.0
-    profiles: ["observability"]
     ports:
       - "${DOCKER_GRAFANA_PORT:-3000}:3000"
     environment:
