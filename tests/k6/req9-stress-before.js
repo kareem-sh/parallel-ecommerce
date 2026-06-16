@@ -5,9 +5,12 @@ import { baseUrl } from './lib/common.js';
 export const options = {
   scenarios: {
     stress_before: {
-      executor: 'constant-vus',
-      vus: 100,
-      duration: '30s',
+      executor: 'ramping-vus',
+      startVUs: 100,
+      stages: [
+        { duration: '30s', target: 100 },
+      ],
+      gracefulRampDown: '0s',
     },
   },
   thresholds: {

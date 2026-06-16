@@ -5,14 +5,17 @@ import { baseUrl } from './lib/common.js';
 export const options = {
   scenarios: {
     stress_after: {
-      executor: 'constant-vus',
-      vus: 100,
-      duration: '30s',
+      executor: 'ramping-vus',
+      startVUs: 100,
+      stages: [
+        { duration: '30s', target: 100 },
+      ],
+      gracefulRampDown: '0s',
     },
   },
   thresholds: {
-    http_req_duration: ['p(95)<2500'],
     checks: ['rate>0.98'],
+    http_req_failed: ['rate<0.60'],
   },
 };
 

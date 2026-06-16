@@ -477,7 +477,7 @@ Compare:
 - `cache_hit_rate` (after should be > 0, before must stay 0)
 - `hot_products_read_ms` p95 (after should be lower after warmup)
 
-## Requirement 7: Concurrency Control (Optimistic Locking)
+## Requirement 7: Concurrency Control (Distributed Locking)
 
 **Old problem**
 
@@ -493,7 +493,7 @@ Function:
 App\Services\EcommerceNfrService::legacyStockAdjustment
 ```
 
-Read-modify-write without `stock_version` check.
+Read-modify-write without Redis lock or row-level coordination.
 
 Run old k6 test:
 
@@ -515,15 +515,7 @@ Function:
 App\Services\EcommerceNfrService::optimizedStockAdjustment
 ```
 
-Uses optimistic locking:
-
-```sql
-UPDATE products
-SET stock = stock + :delta, stock_version = stock_version + 1
-WHERE id = :id AND stock_version = :expected
-```
-
-Stale versions return `409 Conflict`.
+Uses a **Redis distributed lock** per product (`ecommerce:stock:adjust:{id}`) plus a database transaction with `lockForUpdate()`. Response includes `"locking": "distributed"`. Lock timeouts return `409 Conflict`.
 
 Run new k6 test:
 
@@ -587,7 +579,7 @@ Endpoint under stress:
 GET /api/before/hot-products
 ```
 
-100 virtual users for 30 seconds. The system may slow down but should stay reachable.
+100 virtual users for 30 seconds, **all starting at the same moment** (`ramping-vus` with `startVUs: 100`). The system may slow down but should stay reachable.
 
 Run old k6 test:
 
@@ -615,13 +607,15 @@ docker compose --profile test run --rm k6 run /scripts/req9-stress-after.js --su
 
 **Old problem**
 
-Endpoint:
+Endpoints exercised per iteration (`req10-bench-before.js`):
 
 ```text
+GET /api/before/products
+GET /api/before/hot-products
 GET /api/before/benchmarks/products
 ```
 
-Bottleneck header:
+Bottleneck header on benchmark route:
 
 ```text
 X-Benchmark-Bottleneck: direct-database-scan
@@ -635,9 +629,11 @@ docker compose --profile test run --rm k6 run /scripts/req10-bench-before.js --s
 
 **New solution**
 
-Endpoint:
+Endpoints exercised per iteration (`req10-bench-after.js`):
 
 ```text
+GET /api/after/products
+GET /api/after/hot-products
 GET /api/after/benchmarks/products
 ```
 
@@ -647,7 +643,7 @@ Bottleneck header:
 X-Benchmark-Bottleneck: redis-cache
 ```
 
-Compare JSON field `duration_ms` and k6 trend `benchmark_duration_ms` before vs after.
+Compare k6 trends `products_read_ms`, `hot_products_read_ms`, `benchmark_duration_ms`, and `benchmark_cache_hit_rate` before vs after. See `explanation.md` §5.
 
 Run new k6 test:
 
