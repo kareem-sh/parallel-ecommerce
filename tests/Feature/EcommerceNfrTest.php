@@ -218,7 +218,7 @@ class EcommerceNfrTest extends TestCase
             ->assertJsonPath('cached', true);
     }
 
-    public function test_requirement_7_after_stock_adjustment_rejects_stale_optimistic_lock_version(): void
+    public function test_requirement_7_after_stock_adjustment_uses_distributed_lock(): void
     {
         $product = Product::create([
             'sku' => 'LOCK-1',
@@ -235,19 +235,16 @@ class EcommerceNfrTest extends TestCase
 
         $product->refresh();
         $this->assertSame(9, $product->stock);
-        $this->assertSame(0, $product->stock_version);
 
         $this->postJson("/api/after/products/{$product->id}/stock-adjust", [
             'delta' => -2,
-            'expected_version' => 0,
         ])->assertOk()
-            ->assertJsonPath('locking', 'optimistic')
+            ->assertJsonPath('locking', 'distributed')
             ->assertJsonPath('data.stock', 7)
             ->assertJsonPath('data.stock_version', 1);
 
         $this->postJson("/api/after/products/{$product->id}/stock-adjust", [
-            'delta' => -1,
-            'expected_version' => 0,
+            'delta' => -20,
         ])->assertStatus(409)
             ->assertJsonPath('requirement', 7);
     }

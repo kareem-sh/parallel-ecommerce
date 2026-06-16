@@ -81,6 +81,22 @@ return [
             'replace_placeholders' => true,
         ],
 
+        'success' => [
+            'driver' => 'daily',
+            'path' => storage_path('logs/success.log'),
+            'level' => env('SUCCESS_LOG_LEVEL', 'info'),
+            'days' => env('NFR_LOG_DAYS', 7),
+            'replace_placeholders' => true,
+        ],
+
+        'error' => [
+            'driver' => 'daily',
+            'path' => storage_path('logs/error.log'),
+            'level' => env('ERROR_LOG_LEVEL', 'warning'),
+            'days' => env('NFR_LOG_DAYS', 7),
+            'replace_placeholders' => true,
+        ],
+
         'slack' => [
             'driver' => 'slack',
             'url' => env('LOG_SLACK_WEBHOOK_URL'),

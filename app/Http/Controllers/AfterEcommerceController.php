@@ -90,7 +90,6 @@ class AfterEcommerceController extends Controller
     {
         $data = $request->validate([
             'delta' => ['required', 'integer', 'between:-1000,1000'],
-            'expected_version' => ['sometimes', 'integer', 'min:0'],
         ]);
 
         $requestId = $this->requestId();
@@ -100,10 +99,9 @@ class AfterEcommerceController extends Controller
             return response()->json($this->service->optimizedStockAdjustment(
                 $productModel,
                 (int) $data['delta'],
-                array_key_exists('expected_version', $data) ? (int) $data['expected_version'] : null,
             ))->header('X-Backend-Version', 'after')
                 ->header('X-Request-Id', $requestId);
-        } catch (RuntimeException $exception) {
+        } catch (LockTimeoutException | RuntimeException $exception) {
             return response()->json([
                 'version' => 'after',
                 'requirement' => 7,

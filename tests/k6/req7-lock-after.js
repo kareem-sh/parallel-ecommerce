@@ -3,9 +3,9 @@ import { check } from 'k6';
 import { Counter, Rate } from 'k6/metrics';
 import { baseUrl } from './lib/common.js';
 
-const conflicts = new Counter('optimistic_lock_conflicts');
+const lockTimeouts = new Counter('distributed_lock_timeouts');
 const accepted = new Counter('stock_adjust_accepted');
-const conflictRate = new Rate('conflict_rate');
+const lockContentionRate = new Rate('lock_contention_rate');
 
 export const options = {
   scenarios: {
@@ -17,8 +17,8 @@ export const options = {
   },
   thresholds: {
     checks: ['rate>0.95'],
-    optimistic_lock_conflicts: ['count>5'],
-    conflict_rate: ['rate>0.05'],
+    stock_adjust_accepted: ['count>20'],
+    lock_contention_rate: ['rate<0.5'],
   },
 };
 
@@ -39,33 +39,44 @@ export function setup() {
 
   return {
     productId: response.json('data.id'),
-    expectedVersion: 0,
+    startingStock: 60,
   };
 }
 
 export default function (data) {
   const response = http.post(
     `${baseUrl}/api/after/products/${data.productId}/stock-adjust`,
-    JSON.stringify({
-      delta: -1,
-      expected_version: data.expectedVersion,
-    }),
+    JSON.stringify({ delta: -1 }),
     { headers: { 'Content-Type': 'application/json' } },
   );
 
   if (response.status === 200) {
     accepted.add(1);
-    conflictRate.add(false);
+    lockContentionRate.add(false);
   }
 
   if (response.status === 409) {
-    conflicts.add(1);
-    conflictRate.add(true);
+    lockTimeouts.add(1);
+    lockContentionRate.add(true);
   }
 
   check(response, {
-    'after uses optimistic locking semantics': (r) => r.status === 200 || r.status === 409,
+    'after uses distributed lock semantics': (r) => r.status === 200 || r.status === 409,
+    'after exposes distributed locking': (r) =>
+      r.status !== 200 || r.json('locking') === 'distributed',
     'after conflict mentions requirement 7': (r) =>
       r.status !== 409 || r.json('requirement') === 7,
+  });
+}
+
+export function teardown(data) {
+  const response = http.get(`${baseUrl}/api/after/products?limit=100`);
+  const products = response.json('data') || [];
+  const product = products.find((item) => item.id === data.productId);
+  const remaining = product ? product.stock : data.startingStock;
+
+  check({ remaining }, {
+    'after keeps stock non-negative under concurrent decrements': () => remaining >= 0,
+    'after does not lose updates like the before path': () => remaining < data.startingStock,
   });
 }

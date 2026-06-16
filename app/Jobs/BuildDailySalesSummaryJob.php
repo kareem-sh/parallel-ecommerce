@@ -4,10 +4,10 @@ namespace App\Jobs;
 
 use App\Models\DailySalesSummary;
 use App\Models\Order;
+use App\Support\NfrLogger;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Carbon;
-use Illuminate\Support\Facades\Log;
 
 class BuildDailySalesSummaryJob implements ShouldQueue
 {
@@ -50,7 +50,7 @@ class BuildDailySalesSummaryJob implements ShouldQueue
             ],
         );
 
-        Log::channel('nfr')->info('daily_sales_summary_built_in_chunks', [
+        NfrLogger::success('daily_sales_summary_built_in_chunks', [
             'sales_date' => $date,
             'orders_count' => $ordersCount,
             'items_sold' => $itemsSold,

@@ -3,9 +3,9 @@
 namespace App\Jobs;
 
 use App\Models\Order;
+use App\Support\NfrLogger;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
-use Illuminate\Support\Facades\Log;
 
 class SendOrderReceiptJob implements ShouldQueue
 {
@@ -20,7 +20,7 @@ class SendOrderReceiptJob implements ShouldQueue
     {
         $order = Order::query()->with('items')->findOrFail($this->orderId);
 
-        Log::channel('nfr')->info('async_order_receipt_generated', [
+        NfrLogger::success('async_order_receipt_generated', [
             'order_id' => $order->id,
             'customer_email' => $order->customer_email,
             'total' => $order->total,

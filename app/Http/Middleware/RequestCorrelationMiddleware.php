@@ -2,9 +2,9 @@
 
 namespace App\Http\Middleware;
 
+use App\Support\NfrLogger;
 use Closure;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -24,14 +24,20 @@ class RequestCorrelationMiddleware
         $response->headers->set('X-Request-Id', $requestId);
 
         if (str_starts_with($request->path(), 'api/')) {
-            Log::channel('nfr')->info('nfr_request_completed', [
+            $context = [
                 'request_id' => $requestId,
                 'method' => $request->method(),
                 'path' => $request->path(),
                 'status' => $response->getStatusCode(),
                 'duration_ms' => $durationMs,
                 'ip' => $request->ip(),
-            ]);
+            ];
+
+            if ($response->getStatusCode() >= 400) {
+                NfrLogger::error('nfr_request_completed', $context);
+            } else {
+                NfrLogger::success('nfr_request_completed', $context);
+            }
         }
 
         return $response;

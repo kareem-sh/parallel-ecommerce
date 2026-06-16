@@ -5,9 +5,10 @@ namespace App\Services;
 use App\Jobs\SendOrderReceiptJob;
 use App\Models\Order;
 use App\Models\Product;
+use App\Support\NfrLogger;
+use Illuminate\Contracts\Cache\LockTimeoutException;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
 use RuntimeException;
 
 class EcommerceNfrService
@@ -27,7 +28,7 @@ class EcommerceNfrService
 
         usleep(80000);
 
-        Log::channel('nfr')->warning('before_products_loaded_without_cache', [
+NfrLogger::error('before_products_loaded_without_cache', [
             'limit' => $limit,
             'duration_ms' => $this->durationMs($started),
         ]);
@@ -57,7 +58,7 @@ class EcommerceNfrService
                 ->all();
         });
 
-        Log::channel('nfr')->info('after_products_loaded', [
+NfrLogger::success('after_products_loaded', [
             'limit' => $limit,
             'cached' => $cached,
             'duration_ms' => $this->durationMs($started),
@@ -86,7 +87,7 @@ class EcommerceNfrService
 
         usleep(90000);
 
-        Log::channel('nfr')->warning('before_hot_products_loaded_without_distributed_cache', [
+NfrLogger::error('before_hot_products_loaded_without_distributed_cache', [
             'limit' => $limit,
             'duration_ms' => $this->durationMs($started),
         ]);
@@ -117,7 +118,7 @@ class EcommerceNfrService
                 ->all();
         });
 
-        Log::channel('nfr')->info('after_hot_products_loaded_from_distributed_cache', [
+NfrLogger::success('after_hot_products_loaded_from_distributed_cache', [
             'limit' => $limit,
             'cached' => $cached,
             'duration_ms' => $this->durationMs($started),
@@ -138,7 +139,7 @@ class EcommerceNfrService
         $started = microtime(true);
         $product = Product::create($data);
 
-        Log::channel('nfr')->warning('before_product_created_without_cache_invalidation', [
+NfrLogger::error('before_product_created_without_cache_invalidation', [
             'product_id' => $product->id,
             'duration_ms' => $this->durationMs($started),
         ]);
@@ -157,7 +158,7 @@ class EcommerceNfrService
 
         $this->forgetProductCaches();
 
-        Log::channel('nfr')->info('after_product_created_and_cache_invalidated', [
+NfrLogger::success('after_product_created_and_cache_invalidated', [
             'product_id' => $product->id,
             'duration_ms' => $this->durationMs($started),
         ]);
@@ -179,7 +180,7 @@ class EcommerceNfrService
         $product->stock = $originalStock + $delta;
         $product->save();
 
-        Log::channel('nfr')->warning('before_stock_adjusted_without_concurrency_control', [
+NfrLogger::error('before_stock_adjusted_without_concurrency_control', [
             'product_id' => $product->id,
             'delta' => $delta,
             'duration_ms' => $this->durationMs($started),
@@ -194,39 +195,38 @@ class EcommerceNfrService
         ];
     }
 
-    public function optimizedStockAdjustment(Product $product, int $delta, ?int $expectedVersion): array
+    public function optimizedStockAdjustment(Product $product, int $delta): array
     {
         $started = microtime(true);
-        $current = Product::query()->whereKey($product->id)->firstOrFail();
+        $lock = Cache::lock("ecommerce:stock:adjust:{$product->id}", 10);
 
-        if ($expectedVersion !== null && $expectedVersion !== $current->stock_version) {
-            throw new RuntimeException('Inventory version conflict. Refresh product stock and retry.');
+        try {
+            $fresh = $lock->block(5, function () use ($product, $delta) {
+                return DB::transaction(function () use ($product, $delta) {
+                    $current = Product::query()
+                        ->whereKey($product->id)
+                        ->lockForUpdate()
+                        ->firstOrFail();
+
+                    if ($delta < 0 && $current->stock < abs($delta)) {
+                        throw new RuntimeException('Not enough stock for this adjustment.');
+                    }
+
+                    $current->stock += $delta;
+                    $current->stock_version += 1;
+                    $current->save();
+
+                    return $current->fresh();
+                });
+            });
+        } catch (LockTimeoutException) {
+            throw new RuntimeException('Inventory is busy. Could not acquire distributed lock.');
         }
-
-        $query = Product::query()
-            ->whereKey($product->id)
-            ->where('stock_version', $current->stock_version);
-
-        if ($delta < 0) {
-            $query->where('stock', '>=', abs($delta));
-        }
-
-        $updated = $query->update([
-            'stock' => DB::raw('stock + ' . $delta),
-            'stock_version' => DB::raw('stock_version + 1'),
-            'updated_at' => now(),
-        ]);
-
-        if ($updated !== 1) {
-            throw new RuntimeException('Inventory update conflicted or stock is not enough.');
-        }
-
-        $fresh = $product->fresh();
 
         $this->forgetProductCaches();
         $this->forgetHotProductCaches();
 
-        Log::channel('nfr')->info('after_stock_adjusted_with_optimistic_locking', [
+        NfrLogger::success('after_stock_adjusted_with_distributed_lock', [
             'product_id' => $product->id,
             'delta' => $delta,
             'stock_version' => $fresh->stock_version,
@@ -236,8 +236,8 @@ class EcommerceNfrService
         return [
             'version' => 'after',
             'requirement' => 7,
-            'solution' => 'Stock adjustment uses optimistic locking through stock_version.',
-            'locking' => 'optimistic',
+            'solution' => 'Stock adjustment uses a Redis distributed lock per product.',
+            'locking' => 'distributed',
             'data' => $fresh,
         ];
     }
@@ -253,7 +253,7 @@ class EcommerceNfrService
 
         usleep(70000);
 
-        Log::channel('nfr')->warning('before_orders_loaded_without_cache', [
+NfrLogger::error('before_orders_loaded_without_cache', [
             'limit' => $limit,
             'duration_ms' => $this->durationMs($started),
         ]);
@@ -281,7 +281,7 @@ class EcommerceNfrService
                 ->get();
         });
 
-        Log::channel('nfr')->info('after_orders_loaded', [
+NfrLogger::success('after_orders_loaded', [
             'limit' => $limit,
             'cached' => $cached,
             'duration_ms' => $this->durationMs($started),
@@ -326,7 +326,7 @@ class EcommerceNfrService
 
         $order->update(['total' => $total]);
 
-        Log::channel('nfr')->warning('before_order_created_without_transaction_or_lock', [
+NfrLogger::error('before_order_created_without_transaction_or_lock', [
             'order_id' => $order->id,
             'duration_ms' => $this->durationMs($started),
         ]);
@@ -392,7 +392,7 @@ class EcommerceNfrService
 
         SendOrderReceiptJob::dispatch($order->id);
 
-        Log::channel('nfr')->info('after_order_created_with_transaction_lock_and_cache_invalidation', [
+NfrLogger::success('after_order_created_with_transaction_lock_and_cache_invalidation', [
             'order_id' => $order->id,
             'duration_ms' => $this->durationMs($started),
         ]);
@@ -433,7 +433,7 @@ class EcommerceNfrService
         $order->update(['total' => $total]);
 
         if ($data['fail_payment'] ?? false) {
-            Log::channel('nfr')->warning('before_checkout_left_partial_state_after_payment_failure', [
+    NfrLogger::error('before_checkout_left_partial_state_after_payment_failure', [
                 'order_id' => $order->id,
                 'duration_ms' => $this->durationMs($started),
             ]);
@@ -509,7 +509,7 @@ class EcommerceNfrService
         $this->forgetHotProductCaches();
         $this->forgetOrderCaches();
 
-        Log::channel('nfr')->info('after_checkout_committed_atomically', [
+NfrLogger::success('after_checkout_committed_atomically', [
             'order_id' => $order->id,
             'duration_ms' => $this->durationMs($started),
         ]);
@@ -612,7 +612,7 @@ class EcommerceNfrService
                 }
             });
 
-        Log::channel('nfr')->info('daily_sales_processed_in_chunks', [
+NfrLogger::success('daily_sales_processed_in_chunks', [
             'processed_orders' => $processed,
             'total_revenue' => $totalRevenue,
             'duration_ms' => $this->durationMs($started),

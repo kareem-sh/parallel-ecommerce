@@ -4,7 +4,7 @@ namespace App\Http\Middleware;
 
 use Closure;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Log;
+use App\Support\NfrLogger;
 use Illuminate\Support\Facades\Redis;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -30,7 +30,7 @@ class CapacityLimiterMiddleware
         if ($active > $maxConcurrent) {
             $redis->decr($key);
 
-            Log::channel('nfr')->warning('capacity_limiter_rejected', [
+            NfrLogger::error('capacity_limiter_rejected', [
                 'active' => $active,
                 'max' => $maxConcurrent,
             ]);
