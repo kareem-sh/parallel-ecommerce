@@ -593,7 +593,7 @@ NfrLogger::success('after_checkout_committed_atomically', [
     {
         return round((microtime(true) - $started) * 1000, 2);
     }
-    
+
     public function processDailySalesReport(): array
     {
         $started = microtime(true);
