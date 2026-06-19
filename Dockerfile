@@ -17,7 +17,7 @@ COPY docker/php-fpm/zzz-custom.conf /usr/local/etc/php-fpm.d/zzz-custom.conf
 WORKDIR /var/www/html
 
 COPY . .
-RUN composer install --no-interaction --prefer-dist --optimize-autoloader
+RUN composer install --no-interaction --prefer-dist --optimize-autoloader --no-scripts
 
 RUN mkdir -p storage/logs storage/framework/cache/data storage/framework/sessions storage/framework/views bootstrap/cache \
     && chmod -R 775 storage bootstrap/cache

@@ -19,7 +19,7 @@
     "links": [],
     "panels": [
         {
-            "datasource": { "type": "influxdb" },
+            "datasource": { "type": "prometheus" },
             "fieldConfig": {
                 "defaults": {
                     "color": { "mode": "palette-classic" },
@@ -36,7 +36,11 @@
             "gridPos": { "h": 7, "w": 6, "x": 0, "y": 0 },
             "id": 1,
             "options": {
-                "legend": { "displayMode": "list", "placement": "bottom", "showLegend": true },
+                "legend": {
+                    "displayMode": "list",
+                    "placement": "bottom",
+                    "showLegend": true
+                },
                 "tooltip": { "mode": "single" }
             },
             "targets": [
@@ -51,11 +55,16 @@
             "type": "timeseries"
         },
         {
-            "datasource": { "type": "influxdb" },
+            "datasource": { "type": "prometheus" },
             "fieldConfig": {
                 "defaults": {
                     "color": { "mode": "palette-classic" },
-                    "custom": { "drawStyle": "line", "lineWidth": 1, "showPoints": "never", "fillOpacity": 10 },
+                    "custom": {
+                        "drawStyle": "line",
+                        "lineWidth": 1,
+                        "showPoints": "never",
+                        "fillOpacity": 10
+                    },
                     "unit": "ms"
                 },
                 "overrides": []
@@ -63,7 +72,11 @@
             "gridPos": { "h": 7, "w": 6, "x": 6, "y": 0 },
             "id": 2,
             "options": {
-                "legend": { "displayMode": "list", "placement": "bottom", "showLegend": true },
+                "legend": {
+                    "displayMode": "list",
+                    "placement": "bottom",
+                    "showLegend": true
+                },
                 "tooltip": { "mode": "single" }
             },
             "targets": [
@@ -78,11 +91,16 @@
             "type": "timeseries"
         },
         {
-            "datasource": { "type": "influxdb" },
+            "datasource": { "type": "prometheus" },
             "fieldConfig": {
                 "defaults": {
                     "color": { "mode": "palette-classic" },
-                    "custom": { "drawStyle": "line", "lineWidth": 1, "showPoints": "never", "fillOpacity": 10 },
+                    "custom": {
+                        "drawStyle": "line",
+                        "lineWidth": 1,
+                        "showPoints": "never",
+                        "fillOpacity": 10
+                    },
                     "unit": "ms"
                 },
                 "overrides": []
@@ -90,7 +108,11 @@
             "gridPos": { "h": 7, "w": 6, "x": 12, "y": 0 },
             "id": 3,
             "options": {
-                "legend": { "displayMode": "list", "placement": "bottom", "showLegend": true },
+                "legend": {
+                    "displayMode": "list",
+                    "placement": "bottom",
+                    "showLegend": true
+                },
                 "tooltip": { "mode": "single" }
             },
             "targets": [
@@ -105,11 +127,16 @@
             "type": "timeseries"
         },
         {
-            "datasource": { "type": "influxdb" },
+            "datasource": { "type": "prometheus" },
             "fieldConfig": {
                 "defaults": {
                     "color": { "mode": "palette-classic" },
-                    "custom": { "drawStyle": "line", "lineWidth": 1, "showPoints": "never", "fillOpacity": 10 },
+                    "custom": {
+                        "drawStyle": "line",
+                        "lineWidth": 1,
+                        "showPoints": "never",
+                        "fillOpacity": 10
+                    },
                     "unit": "ms"
                 },
                 "overrides": []
@@ -117,7 +144,11 @@
             "gridPos": { "h": 7, "w": 6, "x": 18, "y": 0 },
             "id": 4,
             "options": {
-                "legend": { "displayMode": "list", "placement": "bottom", "showLegend": true },
+                "legend": {
+                    "displayMode": "list",
+                    "placement": "bottom",
+                    "showLegend": true
+                },
                 "tooltip": { "mode": "single" }
             },
             "targets": [
@@ -132,11 +163,16 @@
             "type": "timeseries"
         },
         {
-            "datasource": { "type": "influxdb" },
+            "datasource": { "type": "prometheus" },
             "fieldConfig": {
                 "defaults": {
                     "color": { "mode": "palette-classic" },
-                    "custom": { "drawStyle": "line", "lineWidth": 1, "showPoints": "never", "fillOpacity": 10 },
+                    "custom": {
+                        "drawStyle": "line",
+                        "lineWidth": 1,
+                        "showPoints": "never",
+                        "fillOpacity": 10
+                    },
                     "unit": "reqps"
                 },
                 "overrides": []
@@ -144,7 +180,11 @@
             "gridPos": { "h": 7, "w": 6, "x": 0, "y": 7 },
             "id": 5,
             "options": {
-                "legend": { "displayMode": "list", "placement": "bottom", "showLegend": true },
+                "legend": {
+                    "displayMode": "list",
+                    "placement": "bottom",
+                    "showLegend": true
+                },
                 "tooltip": { "mode": "single" }
             },
             "targets": [
@@ -159,15 +199,13 @@
             "type": "timeseries"
         },
         {
-            "datasource": { "type": "influxdb" },
+            "datasource": { "type": "prometheus" },
             "fieldConfig": {
                 "defaults": {
                     "color": { "mode": "thresholds" },
                     "thresholds": {
                         "mode": "absolute",
-                        "steps": [
-                            { "color": "blue", "value": null }
-                        ]
+                        "steps": [{ "color": "blue", "value": null }]
                     },
                     "unit": "short"
                 },
@@ -180,7 +218,11 @@
                 "graphMode": "area",
                 "justifyMode": "auto",
                 "orientation": "auto",
-                "reduceOptions": { "calcs": ["sum"], "fields": "", "values": false },
+                "reduceOptions": {
+                    "calcs": ["sum"],
+                    "fields": "",
+                    "values": false
+                },
                 "textMode": "auto"
             },
             "targets": [
@@ -195,11 +237,16 @@
             "type": "stat"
         },
         {
-            "datasource": { "type": "influxdb" },
+            "datasource": { "type": "prometheus" },
             "fieldConfig": {
                 "defaults": {
                     "color": { "mode": "palette-classic" },
-                    "custom": { "drawStyle": "line", "lineWidth": 1, "showPoints": "never", "fillOpacity": 10 },
+                    "custom": {
+                        "drawStyle": "line",
+                        "lineWidth": 1,
+                        "showPoints": "never",
+                        "fillOpacity": 10
+                    },
                     "unit": "short"
                 },
                 "overrides": []
@@ -207,7 +254,11 @@
             "gridPos": { "h": 7, "w": 6, "x": 12, "y": 7 },
             "id": 7,
             "options": {
-                "legend": { "displayMode": "list", "placement": "bottom", "showLegend": true },
+                "legend": {
+                    "displayMode": "list",
+                    "placement": "bottom",
+                    "showLegend": true
+                },
                 "tooltip": { "mode": "single" }
             },
             "targets": [
@@ -222,11 +273,16 @@
             "type": "timeseries"
         },
         {
-            "datasource": { "type": "influxdb" },
+            "datasource": { "type": "prometheus" },
             "fieldConfig": {
                 "defaults": {
                     "color": { "mode": "palette-classic" },
-                    "custom": { "drawStyle": "line", "lineWidth": 1, "showPoints": "never", "fillOpacity": 10 },
+                    "custom": {
+                        "drawStyle": "line",
+                        "lineWidth": 1,
+                        "showPoints": "never",
+                        "fillOpacity": 10
+                    },
                     "unit": "short"
                 },
                 "overrides": []
@@ -234,7 +290,11 @@
             "gridPos": { "h": 7, "w": 6, "x": 18, "y": 7 },
             "id": 8,
             "options": {
-                "legend": { "displayMode": "list", "placement": "bottom", "showLegend": true },
+                "legend": {
+                    "displayMode": "list",
+                    "placement": "bottom",
+                    "showLegend": true
+                },
                 "tooltip": { "mode": "single" }
             },
             "targets": [
@@ -249,11 +309,16 @@
             "type": "timeseries"
         },
         {
-            "datasource": { "type": "influxdb" },
+            "datasource": { "type": "prometheus" },
             "fieldConfig": {
                 "defaults": {
                     "color": { "mode": "palette-classic" },
-                    "custom": { "drawStyle": "line", "lineWidth": 1, "showPoints": "never", "fillOpacity": 15 },
+                    "custom": {
+                        "drawStyle": "line",
+                        "lineWidth": 1,
+                        "showPoints": "never",
+                        "fillOpacity": 15
+                    },
                     "max": 100,
                     "min": 0,
                     "unit": "percent"
@@ -263,7 +328,11 @@
             "gridPos": { "h": 7, "w": 8, "x": 0, "y": 14 },
             "id": 9,
             "options": {
-                "legend": { "displayMode": "list", "placement": "bottom", "showLegend": true },
+                "legend": {
+                    "displayMode": "list",
+                    "placement": "bottom",
+                    "showLegend": true
+                },
                 "tooltip": { "mode": "single" }
             },
             "targets": [
@@ -278,11 +347,16 @@
             "type": "timeseries"
         },
         {
-            "datasource": { "type": "influxdb" },
+            "datasource": { "type": "prometheus" },
             "fieldConfig": {
                 "defaults": {
                     "color": { "mode": "palette-classic" },
-                    "custom": { "drawStyle": "line", "lineWidth": 1, "showPoints": "never", "fillOpacity": 15 },
+                    "custom": {
+                        "drawStyle": "line",
+                        "lineWidth": 1,
+                        "showPoints": "never",
+                        "fillOpacity": 15
+                    },
                     "max": 100,
                     "min": 0,
                     "unit": "percent"
@@ -292,7 +366,11 @@
             "gridPos": { "h": 7, "w": 8, "x": 8, "y": 14 },
             "id": 10,
             "options": {
-                "legend": { "displayMode": "list", "placement": "bottom", "showLegend": true },
+                "legend": {
+                    "displayMode": "list",
+                    "placement": "bottom",
+                    "showLegend": true
+                },
                 "tooltip": { "mode": "single" }
             },
             "targets": [
@@ -307,7 +385,7 @@
             "type": "timeseries"
         },
         {
-            "datasource": { "type": "influxdb" },
+            "datasource": { "type": "prometheus" },
             "fieldConfig": {
                 "defaults": {
                     "color": { "mode": "thresholds" },
@@ -329,7 +407,11 @@
                 "graphMode": "area",
                 "justifyMode": "auto",
                 "orientation": "auto",
-                "reduceOptions": { "calcs": ["max"], "fields": "", "values": false },
+                "reduceOptions": {
+                    "calcs": ["max"],
+                    "fields": "",
+                    "values": false
+                },
                 "textMode": "auto"
             },
             "targets": [
@@ -344,11 +426,16 @@
             "type": "stat"
         },
         {
-            "datasource": { "type": "influxdb" },
+            "datasource": { "type": "prometheus" },
             "fieldConfig": {
                 "defaults": {
                     "color": { "mode": "palette-classic" },
-                    "custom": { "drawStyle": "line", "lineWidth": 1, "showPoints": "never", "fillOpacity": 10 },
+                    "custom": {
+                        "drawStyle": "line",
+                        "lineWidth": 1,
+                        "showPoints": "never",
+                        "fillOpacity": 10
+                    },
                     "unit": "ms"
                 },
                 "overrides": []
@@ -356,7 +443,11 @@
             "gridPos": { "h": 7, "w": 12, "x": 0, "y": 21 },
             "id": 12,
             "options": {
-                "legend": { "displayMode": "list", "placement": "bottom", "showLegend": true },
+                "legend": {
+                    "displayMode": "list",
+                    "placement": "bottom",
+                    "showLegend": true
+                },
                 "tooltip": { "mode": "single" }
             },
             "targets": [
@@ -371,11 +462,16 @@
             "type": "timeseries"
         },
         {
-            "datasource": { "type": "influxdb" },
+            "datasource": { "type": "prometheus" },
             "fieldConfig": {
                 "defaults": {
                     "color": { "mode": "palette-classic" },
-                    "custom": { "drawStyle": "line", "lineWidth": 1, "showPoints": "never", "fillOpacity": 10 },
+                    "custom": {
+                        "drawStyle": "line",
+                        "lineWidth": 1,
+                        "showPoints": "never",
+                        "fillOpacity": 10
+                    },
                     "unit": "ms"
                 },
                 "overrides": []
@@ -383,7 +479,11 @@
             "gridPos": { "h": 7, "w": 12, "x": 12, "y": 21 },
             "id": 13,
             "options": {
-                "legend": { "displayMode": "list", "placement": "bottom", "showLegend": true },
+                "legend": {
+                    "displayMode": "list",
+                    "placement": "bottom",
+                    "showLegend": true
+                },
                 "tooltip": { "mode": "single" }
             },
             "targets": [

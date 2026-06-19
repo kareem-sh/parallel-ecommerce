@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "5e79d4efc059b303fd6bf1263f1c5559",
+    "content-hash": "8842d8fed04d18bdb0fca0029178b0b7",
     "packages": [
         {
             "name": "brick/math",
@@ -1052,6 +1052,105 @@
                 }
             ],
             "time": "2025-08-22T14:27:06+00:00"
+        },
+        {
+            "name": "iamfarhad/laravel-prometheus",
+            "version": "1.1.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/iamfarhad/laravel-prometheus.git",
+                "reference": "61ec56702bf1acfba84f6a7b17fab251bcedc572"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/iamfarhad/laravel-prometheus/zipball/61ec56702bf1acfba84f6a7b17fab251bcedc572",
+                "reference": "61ec56702bf1acfba84f6a7b17fab251bcedc572",
+                "shasum": ""
+            },
+            "require": {
+                "illuminate/config": "^10.0|^11.0|^12.0|^13.0",
+                "illuminate/database": "^10.0|^11.0|^12.0|^13.0",
+                "illuminate/events": "^10.0|^11.0|^12.0|^13.0",
+                "illuminate/filesystem": "^10.0|^11.0|^12.0|^13.0",
+                "illuminate/log": "^10.0|^11.0|^12.0|^13.0",
+                "illuminate/mail": "^10.0|^11.0|^12.0|^13.0",
+                "illuminate/redis": "^10.0|^11.0|^12.0|^13.0",
+                "illuminate/support": "^10.0|^11.0|^12.0|^13.0",
+                "php": "^8.1",
+                "promphp/prometheus_client_php": "^2.14"
+            },
+            "require-dev": {
+                "laravel/pint": "^1.0",
+                "mockery/mockery": "^1.0|^2.0",
+                "orchestra/testbench": "^8.0|^9.0|^10.0|^11.0",
+                "phpstan/phpstan": "^1.10 || ^2.0",
+                "phpunit/phpunit": "^10.0|^11.0|^12.0"
+            },
+            "suggest": {
+                "ext-apcu": "Required for APCu storage adapter",
+                "ext-redis": "Required for Redis storage adapter",
+                "predis/predis": "Alternative Redis client"
+            },
+            "type": "library",
+            "extra": {
+                "laravel": {
+                    "aliases": {
+                        "Prometheus": "Iamfarhad\\Prometheus\\Facades\\Prometheus"
+                    },
+                    "providers": [
+                        "Iamfarhad\\Prometheus\\PrometheusServiceProvider"
+                    ]
+                },
+                "branch-alias": {
+                    "dev-1.x": "1.x-dev"
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "Iamfarhad\\Prometheus\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Farhad Zand",
+                    "email": "farhad.pd@gmail.com",
+                    "role": "Developer"
+                }
+            ],
+            "description": "Production-ready Laravel Prometheus metrics package with built-in collectors for HTTP, database, cache, queue, events, errors, filesystem, and mail monitoring",
+            "homepage": "https://github.com/iamfarhad/laravel-prometheus",
+            "keywords": [
+                "Metrics",
+                "analytics",
+                "apm",
+                "collector",
+                "counter",
+                "dashboard",
+                "devops",
+                "gauge",
+                "grafana",
+                "histogram",
+                "laravel",
+                "middleware",
+                "monitoring",
+                "observability",
+                "performance",
+                "php",
+                "prometheus",
+                "redis",
+                "summary",
+                "telemetry"
+            ],
+            "support": {
+                "docs": "https://github.com/iamfarhad/laravel-prometheus#readme",
+                "issues": "https://github.com/iamfarhad/laravel-prometheus/issues",
+                "source": "https://github.com/iamfarhad/laravel-prometheus"
+            },
+            "time": "2026-05-10T09:39:53+00:00"
         },
         {
             "name": "laravel/framework",
@@ -2605,6 +2704,76 @@
                 }
             ],
             "time": "2025-12-27T19:41:33+00:00"
+        },
+        {
+            "name": "promphp/prometheus_client_php",
+            "version": "v2.15.1",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/PromPHP/prometheus_client_php.git",
+                "reference": "e153786bda5ca1d07335a2b5f477742c37195c40"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/PromPHP/prometheus_client_php/zipball/e153786bda5ca1d07335a2b5f477742c37195c40",
+                "reference": "e153786bda5ca1d07335a2b5f477742c37195c40",
+                "shasum": ""
+            },
+            "require": {
+                "ext-json": "*",
+                "php": "^8.2"
+            },
+            "replace": {
+                "endclothing/prometheus_client_php": "*",
+                "jimdo/prometheus_client_php": "*",
+                "lkaemmerling/prometheus_client_php": "*"
+            },
+            "require-dev": {
+                "guzzlehttp/guzzle": "^6.3|^7.0",
+                "phpstan/extension-installer": "^1.0",
+                "phpstan/phpstan": "^1.5.4",
+                "phpstan/phpstan-phpunit": "^1.1.0",
+                "phpstan/phpstan-strict-rules": "^1.1.0",
+                "phpunit/phpunit": "^9.4",
+                "predis/predis": "^2.3",
+                "squizlabs/php_codesniffer": "^3.6 || ^4.0",
+                "symfony/polyfill-apcu": "^1.6"
+            },
+            "suggest": {
+                "ext-apc": "Required if using APCu.",
+                "ext-pdo": "Required if using PDO.",
+                "ext-redis": "Required if using Redis.",
+                "predis/predis": "Required if using Predis.",
+                "promphp/prometheus_push_gateway_php": "An easy client for using Prometheus PushGateway.",
+                "symfony/polyfill-apcu": "Required if you use APCu."
+            },
+            "type": "library",
+            "extra": {
+                "branch-alias": {
+                    "dev-master": "1.0-dev"
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "Prometheus\\": "src/Prometheus/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "Apache-2.0"
+            ],
+            "authors": [
+                {
+                    "name": "Lukas Kämmerling",
+                    "email": "kontakt@lukas-kaemmerling.de"
+                }
+            ],
+            "description": "Prometheus instrumentation library for PHP applications.",
+            "support": {
+                "issues": "https://github.com/PromPHP/prometheus_client_php/issues",
+                "source": "https://github.com/PromPHP/prometheus_client_php/tree/v2.15.1"
+            },
+            "time": "2026-05-28T07:51:04+00:00"
         },
         {
             "name": "psr/clock",
@@ -8521,12 +8690,12 @@
     ],
     "aliases": [],
     "minimum-stability": "stable",
-    "stability-flags": [],
+    "stability-flags": {},
     "prefer-stable": true,
     "prefer-lowest": false,
     "platform": {
         "php": "^8.2"
     },
-    "platform-dev": [],
-    "plugin-api-version": "2.6.0"
+    "platform-dev": {},
+    "plugin-api-version": "2.9.0"
 }

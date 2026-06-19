@@ -129,11 +129,26 @@ services:
       - ./storage/k6:/results
     depends_on:
       - nginx
+      - prometheus
     entrypoint: ["k6"]
     networks:
       - ecommerce-network
     extra_hosts:
       - "host.docker.internal:host-gateway"
+
+  prometheus:
+    image: prom/prometheus:v3.5.0
+    container_name: prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./docker/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--web.enable-remote-write-receiver"
+    networks:
+      - ecommerce-network
 
   influxdb:
     image: influxdb:1.8
@@ -160,7 +175,51 @@ services:
       - ./docker/grafana/provisioning:/etc/grafana/provisioning:ro
       - ./docker/grafana/dashboards:/var/lib/grafana/dashboards:ro
     depends_on:
-      - influxdb
+      # - influxdb
+      - prometheus
+    networks:
+      - ecommerce-network
+
+  redis-exporter:
+    image: oliver006/redis_exporter:v1.61.0
+    container_name: redis-exporter
+    ports:
+      - "9121:9121"
+    environment:
+      REDIS_ADDR: redis://redis:6379
+    depends_on:
+      - redis
+    networks:
+      - ecommerce-network
+
+  mysql-exporter:
+    image: prom/mysqld-exporter:v0.15.1
+    container_name: mysql-exporter
+    ports:
+      - "9104:9104"
+    volumes:
+      - ./docker/mysql-exporter/.my.cnf:/etc/.my.cnf:ro
+    command:
+      - "--config.my-cnf=/etc/.my.cnf"
+    depends_on:
+      - mysql
+    networks:
+      - ecommerce-network
+
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:v0.49.1
+    container_name: cadvisor
+    ports:
+      - "8080:8080"
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker:/var/lib/docker:ro
+      - /dev/disk:/dev/disk:ro
+    privileged: true
+    devices:
+      - /dev/kmsg
     networks:
       - ecommerce-network
 
@@ -172,3 +231,4 @@ volumes:
   mysql-data:
   redis-data:
   influxdb-data:
+  prometheus_data:

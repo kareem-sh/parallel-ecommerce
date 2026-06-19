@@ -8,4 +8,22 @@ providers:
     disableDeletion: false
     editable: true
     options:
-      path: /var/lib/grafana/dashboards
+      path: /var/lib/grafana/dashboards/k6
+
+  - name: laravel
+    orgId: 1
+    folder: Laravel
+    type: file
+    disableDeletion: false
+    editable: true
+    options:
+      path: /var/lib/grafana/dashboards/laravel
+
+  - name: infrastructure
+    orgId: 1
+    folder: Infrastructure
+    type: file
+    disableDeletion: false
+    editable: true
+    options:
+      path: /var/lib/grafana/dashboards/infrastructure
