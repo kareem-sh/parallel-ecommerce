@@ -100,6 +100,7 @@ class AfterEcommerceController extends Controller
                 $productModel,
                 (int) $data['delta'],
             ))->header('X-Backend-Version', 'after')
+                ->header('X-Locking-Strategy', 'distributed')
                 ->header('X-Request-Id', $requestId);
         } catch (LockTimeoutException | RuntimeException $exception) {
             return response()->json([

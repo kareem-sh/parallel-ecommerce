@@ -173,16 +173,24 @@ NfrLogger::success('after_product_created_and_cache_invalidated', [
     public function legacyStockAdjustment(Product $product, int $delta): array
     {
         $started = microtime(true);
-        $originalStock = $product->stock;
+        $productId = $product->id;
 
-        usleep(80000);
+        // Req 7 before: intentional stale read-modify-write (no lock).
+        // Concurrent requests snapshot the same stock, sleep, then overwrite each other.
+        $originalStock = (int) Product::query()->whereKey($productId)->value('stock');
 
-        $product->stock = $originalStock + $delta;
-        $product->save();
+        usleep(100000);
 
-NfrLogger::error('before_stock_adjusted_without_concurrency_control', [
-            'product_id' => $product->id,
+        Product::query()
+            ->whereKey($productId)
+            ->update(['stock' => $originalStock + $delta]);
+
+        $fresh = Product::query()->whereKey($productId)->firstOrFail();
+
+        NfrLogger::error('before_stock_adjusted_without_concurrency_control', [
+            'product_id' => $productId,
             'delta' => $delta,
+            'observed_stock' => $originalStock,
             'duration_ms' => $this->durationMs($started),
         ]);
 
@@ -191,7 +199,8 @@ NfrLogger::error('before_stock_adjusted_without_concurrency_control', [
             'requirement' => 7,
             'problem' => 'Stock adjustment uses read-modify-write without optimistic or pessimistic locking.',
             'locking' => 'none',
-            'data' => $product->fresh(),
+            'concurrency_safe' => false,
+            'data' => $fresh,
         ];
     }
 
@@ -238,6 +247,7 @@ NfrLogger::error('before_stock_adjusted_without_concurrency_control', [
             'requirement' => 7,
             'solution' => 'Stock adjustment uses a Redis distributed lock per product.',
             'locking' => 'distributed',
+            'concurrency_safe' => true,
             'data' => $fresh,
         ];
     }

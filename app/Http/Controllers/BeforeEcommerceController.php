@@ -70,7 +70,8 @@ class BeforeEcommerceController extends Controller
         $productModel = \App\Models\Product::findOrFail($product);
 
         return response()->json($this->service->legacyStockAdjustment($productModel, (int) $data['delta']))
-            ->header('X-Backend-Version', 'before');
+            ->header('X-Backend-Version', 'before')
+            ->header('X-Locking-Strategy', 'none');
     }
 
     public function checkout(Request $request): JsonResponse
