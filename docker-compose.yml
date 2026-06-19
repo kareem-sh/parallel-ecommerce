@@ -124,6 +124,8 @@ services:
     environment:
       BASE_URL: ${K6_BASE_URL:-http://nginx:80}
       K6_OUT: influxdb=http://influxdb:8086/k6
+      # K6_OUT: experimental-prometheus-rw
+      # K6_PROMETHEUS_RW_SERVER_URL: http://prometheus:9090/api/v1/write
     volumes:
       - ./tests/k6:/scripts
       - ./storage/k6:/results

@@ -19,7 +19,7 @@
     "links": [],
     "panels": [
         {
-            "datasource": { "type": "prometheus" },
+            "datasource": { "type": "influxdb", "uid": "influxdb" },
             "fieldConfig": {
                 "defaults": {
                     "color": { "mode": "palette-classic" },
@@ -55,7 +55,7 @@
             "type": "timeseries"
         },
         {
-            "datasource": { "type": "prometheus" },
+            "datasource": { "type": "influxdb", "uid": "influxdb" },
             "fieldConfig": {
                 "defaults": {
                     "color": { "mode": "palette-classic" },
@@ -91,7 +91,7 @@
             "type": "timeseries"
         },
         {
-            "datasource": { "type": "prometheus" },
+            "datasource": { "type": "influxdb", "uid": "influxdb" },
             "fieldConfig": {
                 "defaults": {
                     "color": { "mode": "palette-classic" },
@@ -127,7 +127,7 @@
             "type": "timeseries"
         },
         {
-            "datasource": { "type": "prometheus" },
+            "datasource": { "type": "influxdb", "uid": "influxdb" },
             "fieldConfig": {
                 "defaults": {
                     "color": { "mode": "palette-classic" },
@@ -163,7 +163,7 @@
             "type": "timeseries"
         },
         {
-            "datasource": { "type": "prometheus" },
+            "datasource": { "type": "influxdb", "uid": "influxdb" },
             "fieldConfig": {
                 "defaults": {
                     "color": { "mode": "palette-classic" },
@@ -199,7 +199,7 @@
             "type": "timeseries"
         },
         {
-            "datasource": { "type": "prometheus" },
+            "datasource": { "type": "influxdb", "uid": "influxdb" },
             "fieldConfig": {
                 "defaults": {
                     "color": { "mode": "thresholds" },
@@ -237,7 +237,7 @@
             "type": "stat"
         },
         {
-            "datasource": { "type": "prometheus" },
+            "datasource": { "type": "influxdb", "uid": "influxdb" },
             "fieldConfig": {
                 "defaults": {
                     "color": { "mode": "palette-classic" },
@@ -273,7 +273,7 @@
             "type": "timeseries"
         },
         {
-            "datasource": { "type": "prometheus" },
+            "datasource": { "type": "influxdb", "uid": "influxdb" },
             "fieldConfig": {
                 "defaults": {
                     "color": { "mode": "palette-classic" },
@@ -309,7 +309,7 @@
             "type": "timeseries"
         },
         {
-            "datasource": { "type": "prometheus" },
+            "datasource": { "type": "influxdb", "uid": "influxdb" },
             "fieldConfig": {
                 "defaults": {
                     "color": { "mode": "palette-classic" },
@@ -347,7 +347,7 @@
             "type": "timeseries"
         },
         {
-            "datasource": { "type": "prometheus" },
+            "datasource": { "type": "influxdb", "uid": "influxdb" },
             "fieldConfig": {
                 "defaults": {
                     "color": { "mode": "palette-classic" },
@@ -385,7 +385,7 @@
             "type": "timeseries"
         },
         {
-            "datasource": { "type": "prometheus" },
+            "datasource": { "type": "influxdb", "uid": "influxdb" },
             "fieldConfig": {
                 "defaults": {
                     "color": { "mode": "thresholds" },
@@ -426,7 +426,7 @@
             "type": "stat"
         },
         {
-            "datasource": { "type": "prometheus" },
+            "datasource": { "type": "influxdb", "uid": "influxdb" },
             "fieldConfig": {
                 "defaults": {
                     "color": { "mode": "palette-classic" },
@@ -462,7 +462,7 @@
             "type": "timeseries"
         },
         {
-            "datasource": { "type": "prometheus" },
+            "datasource": { "type": "influxdb", "uid": "influxdb" },
             "fieldConfig": {
                 "defaults": {
                     "color": { "mode": "palette-classic" },
