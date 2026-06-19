@@ -17,8 +17,6 @@ class BeforeReportController extends Controller
             ->whereDate('created_at', $date)
             ->get();
 
-        usleep(150000);
-
         return response()->json([
             'version' => 'before',
             'problem' => 'Loads all orders into memory and computes the report inside the user request.',
