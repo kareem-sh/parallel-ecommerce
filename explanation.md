@@ -219,7 +219,7 @@ Mapping to `paralell_project.pdf` / `docs/NFR_REQUIREMENTS_AR.md`:
 | 6 | Redis cache | `req6-cache-before.js` | `GET /api/before/hot-products` | `req6-cache-after.js` | `GET /api/after/hot-products` |
 | 7 | Concurrency / locks | `req7-lock-before.js` | `POST /api/before/.../stock-adjust` | `req7-lock-after.js` | `POST /api/after/.../stock-adjust` |
 | 8 | ACID checkout | `req8-acid-before.js` | `POST /api/before/checkout` | `req8-acid-after.js` | `POST /api/after/checkout` |
-| 9 | Stress 100 VUs (simultaneous) | `req9-stress-before.js` | `GET /api/before/hot-products` | `req9-stress-after.js` | `GET /api/after/hot-products` |
+| 9 | Stress 100 VUs (simultaneous) | `req9-stress-before.js` | Mixed reads: `/api/before/{products,hot-products,orders}` → single `app` | `req9-stress-after.js` | Mixed reads: `/api/after/{products,hot-products,orders}` → load balanced |
 | 10 | Benchmark | `req10-bench-before.js` | multiple routes (see §5) | `req10-bench-after.js` | multiple routes (see §5) |
 
 **How to run all:**

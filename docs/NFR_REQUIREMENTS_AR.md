@@ -33,28 +33,38 @@ Two Docker config files sit **outside** Laravel but are required for several NFR
 
 ### `docker/nginx.conf` — Requirement 5 (Load Distribution)
 
-Nginx is the single public entry point (`localhost:8000`). It defines an upstream pool with **two** PHP-FPM backends:
+Nginx is the single public entry point (`localhost:8000`). **Before** routes hit a **single** PHP-FPM container; **after** routes use a **load-balanced** pool:
 
 ```nginx
-upstream ecommerce_backend {
+upstream before_backend {
+    server app:9000;
+}
+
+upstream after_backend {
     least_conn;
     server app:9000;
     server app2:9000;
 }
+
+map $request_uri $php_upstream {
+    ~^/api/before/   before_backend;
+    default          after_backend;
+}
 ```
 
-| Setting                              | Role in the project                                                                                                                                                                                                    |
-| ------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Two servers (`app`, `app2`)**      | Before path uses one logical backend; after path runs two identical Laravel containers so traffic can be spread across instances.                                                                                      |
-| **`least_conn`**                     | Sends each new request to the worker with the **fewest active connections**. E-commerce requests have uneven duration (cache hit vs miss, orders vs reads), so this is more stable than round-robin for Requirement 5. |
-| **`fastcgi_pass ecommerce_backend`** | All `/api/*` PHP requests go through the pool, not a single container.                                                                                                                                                 |
-| **`fastcgi_keep_conn on`**           | Reuses connections to PHP-FPM under sustained k6 load (`req5-load-after`, `req9-stress-after`).                                                                                                                        |
-| **`fastcgi_buffering off`**          | Reduces latency for long-running demo requests (e.g. `simulate_ms` in capacity tests).                                                                                                                                 |
+| Setting | Role in the project |
+| ------- | ------------------- |
+| **`before_backend` → `app` only** | `/api/before/*` simulates a legacy **single-server** deployment (req 5 before, req 9 before). |
+| **`after_backend` → `app` + `app2`** | `/api/after/*` is spread with **`least_conn`** across two Laravel containers (req 5 after, req 9 after). |
+| **`map $request_uri`** | Chooses upstream from URL prefix; `/api/health` and other routes default to the after pool. |
+| **`fastcgi_pass $php_upstream`** | Per-request routing to the correct upstream. |
+| **`fastcgi_keep_conn on`** | Reuses connections to PHP-FPM under sustained k6 load (`req5-load-after`, `req9-stress-after`). |
+| **`fastcgi_buffering off`** | Reduces latency for long-running demo requests (e.g. `simulate_ms` in capacity tests). |
 
 **Which tests prove it**
 
-- `req5-load-before.js` — hits `/api/before/products` (single-app behavior baseline).
-- `req5-load-after.js` — hits `/api/after/products` through Nginx; both `app` and `app2` serve traffic.
+- `req5-load-before.js` — hits `/api/before/products` → nginx sends traffic **only to `app`**.
+- `req5-load-after.js` — hits `/api/after/products` → nginx **load-balances** across `app` and `app2`.
 
 **Without this file:** only one PHP container would receive traffic; Requirement 5 could not be demonstrated as load distribution across multiple app instances.
 
@@ -573,13 +583,15 @@ docker compose --profile test run --rm k6 run /scripts/req8-acid-after.js --summ
 
 **Old problem**
 
-Endpoint under stress:
+Mixed read routes under stress (random pick per iteration):
 
 ```text
+GET /api/before/products
 GET /api/before/hot-products
+GET /api/before/orders
 ```
 
-100 virtual users for 30 seconds, **all starting at the same moment** (`ramping-vus` with `startVUs: 100`). The system may slow down but should stay reachable.
+100 virtual users for 30 seconds, **all starting at the same moment** (`ramping-vus` with `startVUs: 100`). Nginx sends **only `/api/before/*` to the single `app` container**. The system may slow down but should stay reachable.
 
 Run old k6 test:
 
@@ -589,13 +601,15 @@ docker compose --profile test run --rm k6 run /scripts/req9-stress-before.js --s
 
 **New solution**
 
-Endpoint under stress:
+Same mixed read routes on the after path:
 
 ```text
+GET /api/after/products
 GET /api/after/hot-products
+GET /api/after/orders
 ```
 
-Same 100 users, but Redis cache + capacity middleware keep failure rate low and health checks green after the run.
+Same 100 users; nginx **load-balances `/api/after/*` across `app` + `app2`**. Redis cache + capacity middleware keep failure rate controlled and health checks green after the run.
 
 Run new k6 test:
 
