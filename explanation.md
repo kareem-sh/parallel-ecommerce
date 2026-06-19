@@ -328,11 +328,23 @@ With 100 simultaneous users and a limit of 25, **roughly half** of requests can 
 | **Higher** (e.g. `rate<0.90`) | Very loose. Test almost never fails on error rate even if the app is badly degraded — only use if you only care about `checks` and teardown health. |
 | **Remove it** | Only `checks` and teardown decide pass/fail. Fine for demos if you read `checks` and Grafana; you lose an automatic guard against total meltdown. |
 
-**What to trust for req 9 after “success”:**
+**What to trust for req 9 after “success” (assignment / PDF):**
+
+The PDF requirement (req 9) asks to prove the system can serve **at least 100 concurrent users** **without collapse (انهيار) or data loss (فقدان بيانات)**.
+
+| PDF asks | How we prove it | Pass criterion |
+|----------|-----------------|----------------|
+| 100 users **at the same moment** | `startVUs: 100` + `vus_max >= 100` in k6 | Grafana panel 7 jumps to 100 at t=0 |
+| **No collapse** | Every request gets **200** or controlled **503**; `system_collapse_signals == 0` (no 500/502/timeouts) | Teardown: `/api/health` → 200 |
+| **503 is NOT collapse** | Capacity middleware returns JSON + `Retry-After`; server stays up | Check: `503 is graceful rejection not collapse` |
+| **No data loss** | Teardown: DB + Redis healthy; `GET /api/after/products` still returns data | Checks in `req9-stress-after.js` teardown |
+
+**For your report tomorrow:** A high **503 rate under 100 users with capacity=25 is proof the system stayed alive and protected itself** — it did **not** crash. Collapse would be: timeouts, 500 errors, health check failing, or corrupted/unreadable data after the test.
 
 1. **`checks` ≥ 98%** — every response was 200 or 503 with correct headers.
-2. **Teardown** — `/api/health` shows database and Redis healthy.
-3. **Grafana** — error % may look high; filter mentally: **503 on after path during stress = capacity guard working**, not a broken server.
+2. **`system_collapse_signals` = 0** — no server errors.
+3. **Teardown** — health + products readable.
+4. **Grafana** — VUs at 100 from second 0; error % may include 503 (expected, not collapse).
 
 **Req 9 before** uses `http_req_failed: ['rate<0.35']` on `/api/before/hot-products` (no capacity middleware), so a high failure rate there usually means real overload or outage.
 
@@ -344,7 +356,150 @@ k6 returns **99** when any threshold fails. Exit **0** = all thresholds passed.
 
 ---
 
-## 5. Requirement 10 — benchmarking routes
+## 5. Requirement 10 — benchmarking & bottleneck analysis
+
+### What is a bottleneck?
+
+A **bottleneck** is the **slowest or most overloaded part** of a system that limits overall performance. Think of water through a bottle: no matter how wide the top is, flow is limited by the **narrowest point**.
+
+In this e-commerce API, under read load the bottleneck was:
+
+| Layer | Before (bottleneck) | After (optimized) |
+|-------|---------------------|-------------------|
+| **Hot products reads** | MySQL — full table scan + heavy per-row calculation **every request** | Redis — cached result for 60 seconds |
+| **Symptom** | High `duration_ms`, low RPS, CPU/DB busy | Low `duration_ms` on cache hit, higher throughput |
+
+Other bottlenecks in real systems can be: PHP-FPM workers, nginx, network, disk, locks — req 10 in this project focuses on the **database read path** for hot products.
+
+---
+
+### How do you detect a bottleneck? (general method)
+
+1. **Measure** — run load tests (k6) and record latency (avg, p95), RPS, error rate.
+2. **Compare** — which endpoint or layer is slowest? (e.g. hot-products vs simple health check)
+3. **Isolate** — use a dedicated benchmark endpoint that wraps one operation and returns `duration_ms`.
+4. **Label** — name the bottleneck (header + JSON field) so reports are explicit.
+5. **Verify fix** — run the same test after optimization; p95 should drop and cache hit rate should rise.
+
+**Signs you found a bottleneck:**
+
+- One route’s p95 is **much higher** than others under the same load
+- Latency **grows linearly** with concurrent users while CPU/DB saturation increases
+- **No cache** — same expensive work repeated on every request
+- Grafana/k6: low RPS + high response time on that route only
+
+---
+
+### How this project detects the bottleneck (req 10)
+
+#### 1. Dedicated benchmark API
+
+```text
+GET /api/before/benchmarks/products   → exposes the problem
+GET /api/after/benchmarks/products    → exposes the fix
+```
+
+Implementation wraps the **hot-products** operation and returns metadata:
+
+**Before** (`legacyBenchmarkProducts`):
+
+```525:536:app/Services/EcommerceNfrService.php
+    public function legacyBenchmarkProducts(int $limit): array
+    {
+        $payload = $this->legacyHotProducts($limit);
+
+        return [
+            'version' => 'before',
+            'requirement' => 10,
+            'operation' => 'hot-products',
+            'bottleneck' => 'Repeated direct database scan plus per-product recalculation.',
+            'duration_ms' => $payload['duration_ms'],
+            'cached' => false,
+        ];
+    }
+```
+
+HTTP header: `X-Benchmark-Bottleneck: direct-database-scan`
+
+**After** (`optimizedBenchmarkProducts`):
+
+- Header: `X-Benchmark-Bottleneck: redis-cache`
+- JSON: `bottleneck_removed`, `cached: true/false`, `duration_ms`
+- Cache header: `X-Backend-Cache: hit | miss`
+
+#### 2. k6 load test (`req10-bench-before.js` / `req10-bench-after.js`)
+
+Each iteration hits **3 routes** and records trends:
+
+| Trend | What it measures |
+|-------|------------------|
+| `products_read_ms` | Catalog list latency |
+| `hot_products_read_ms` | Hot products latency (where bottleneck shows) |
+| `benchmark_duration_ms` | Server-measured `duration_ms` from benchmark API |
+| `benchmark_cache_hit_rate` | After only — % of requests served from Redis |
+
+**Before:** `benchmark_duration_ms` p95 **> 30 ms** (slow is expected).  
+**After:** p95 **< 2000 ms** and `benchmark_cache_hit_rate` **> 40%** after warmup.
+
+#### 3. Grafana dashboard
+
+Panels 1–4 (avg, p95, p99, max response time) and RPS show the before/after gap visually after exporting k6 results to InfluxDB.
+
+#### 4. Manual curl (quick demo)
+
+```powershell
+curl -i "http://localhost:8000/api/before/benchmarks/products?limit=20"
+curl -i "http://localhost:8000/api/after/benchmarks/products?limit=20"
+curl -i "http://localhost:8000/api/after/benchmarks/products?limit=20"
+```
+
+Second after-call should show `X-Backend-Cache: hit` and lower `duration_ms` in JSON.
+
+---
+
+### What was the bottleneck? (before)
+
+The **before** hot-products path (`legacyHotProducts`):
+
+1. Queries **all products from MySQL** on every request
+2. Runs **expensive per-product score calculation** (`withSlowLegacyScore` — 300 iterations per row)
+3. Adds artificial delay (`usleep`) to simulate heavy DB work
+4. **No Redis cache** — `cached: false` always
+
+That makes hot-products the **narrow neck** under concurrent reads: DB + CPU do the same work again and again.
+
+---
+
+### How did we solve it? (after)
+
+The **after** path (`optimizedHotProducts` — req 6 + req 10):
+
+1. **Redis cache** key: `ecommerce:hot-products:v1:limit:{n}` TTL **60 seconds**
+2. **Cache hit** → return from memory, skip DB scan
+3. **Cache miss** → one DB query, lighter select (no slow score loop), store in Redis
+4. Benchmark header changes to `X-Benchmark-Bottleneck: redis-cache`
+
+Related optimizations on other read routes (also measured in req 10 k6):
+
+- `GET /api/after/products` — Redis product list cache
+- `GET /api/after/hot-products` — same Redis hot-products cache
+
+---
+
+### How to prove it in your assignment report
+
+| Step | Command / evidence | What to show |
+|------|-------------------|--------------|
+| 1. Run before benchmark | `.\scripts\run-k6-single.ps1 -Test req10-bench-before` | High `benchmark_duration_ms`, `cached: false` |
+| 2. Run after benchmark | `.\scripts\run-k6-single.ps1 -Test req10-bench-after` | Lower duration, `benchmark_cache_hit_rate` high |
+| 3. Compare JSON | `storage/k6/<timestamp>/req10-bench-*.json` | p95 before vs after |
+| 4. Show headers | curl or Postman screenshot | `direct-database-scan` → `redis-cache` |
+| 5. Grafana | Panels 1–5 before vs after run | Visual latency + RPS improvement |
+
+**One sentence for the presentation:**  
+“We detected the bottleneck by benchmarking hot-products reads — every request hit MySQL with heavy calculation (`X-Benchmark-Bottleneck: direct-database-scan`). We solved it with Redis caching (`redis-cache`), proven by lower `duration_ms`, cache hit rate, and k6/Grafana metrics.”
+
+---
 
 ### Is it satisfied?
 

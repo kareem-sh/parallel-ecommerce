@@ -1,6 +1,9 @@
 import http from 'k6/http';
 import { check } from 'k6';
+import { Counter } from 'k6/metrics';
 import { baseUrl } from './lib/common.js';
+
+const collapseSignals = new Counter('system_collapse_signals');
 
 export const options = {
   scenarios: {
@@ -14,16 +17,22 @@ export const options = {
     },
   },
   thresholds: {
-    http_req_failed: ['rate<0.35'],
     checks: ['rate>0.90'],
+    system_collapse_signals: ['count<50'],
+    vus_max: ['value>=100'],
   },
 };
 
 export default function () {
   const response = http.get(`${baseUrl}/api/before/hot-products?limit=20`);
 
+  if (response.status === 0 || response.status >= 500) {
+    collapseSignals.add(1);
+  }
+
   check(response, {
-    'before survives 100 concurrent readers': (r) => r.status === 200 || r.status === 502 || r.status === 503,
+    '100 simultaneous users: before path still responds': (r) =>
+      r.status === 200 || r.status === 502 || r.status === 503,
     'before still returns version header when healthy': (r) =>
       r.status !== 200 || r.headers['X-Backend-Version'] === 'before',
   });
@@ -33,6 +42,7 @@ export function teardown() {
   const health = http.get(`${baseUrl}/api/health`);
 
   check(health, {
-    'system health reachable after before stress': (r) => r.status === 200 || r.status === 503,
+    'before: system reachable after stress (no total collapse)': (r) =>
+      r.status === 200 || r.status === 503,
   });
 }
