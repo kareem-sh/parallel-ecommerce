@@ -2,20 +2,18 @@ import http from 'k6/http';
 import { check } from 'k6';
 import { Counter } from 'k6/metrics';
 import { baseUrl } from './lib/common.js';
-import { beforeStressPaths, pickStressPath } from './lib/stress-routes.js';
+import {
+  beforeStressPaths,
+  maybeWaitForStressBurst,
+  pickStressPath,
+  stressScenarioOptions,
+} from './lib/stress-routes.js';
 
 const collapseSignals = new Counter('system_collapse_signals');
 
 export const options = {
   scenarios: {
-    stress_before: {
-      executor: 'ramping-vus',
-      startVUs: 100,
-      stages: [
-        { duration: '30s', target: 100 },
-      ],
-      gracefulRampDown: '0s',
-    },
+    stress_before: stressScenarioOptions(),
   },
   thresholds: {
     checks: ['rate>0.90'],
@@ -25,6 +23,7 @@ export const options = {
 };
 
 export default function () {
+  maybeWaitForStressBurst();
   const path = pickStressPath(beforeStressPaths);
   const response = http.get(`${baseUrl}${path}`);
 
