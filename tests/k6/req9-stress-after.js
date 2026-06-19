@@ -2,7 +2,12 @@ import http from 'k6/http';
 import { check } from 'k6';
 import { Counter } from 'k6/metrics';
 import { baseUrl } from './lib/common.js';
-import { afterStressPaths, pickStressPath } from './lib/stress-routes.js';
+import {
+  afterStressPaths,
+  maybeWaitForStressBurst,
+  pickStressPath,
+  stressScenarioOptions,
+} from './lib/stress-routes.js';
 
 // 503 = capacity guard (graceful). 500/502/0 = real collapse signals.
 const graceful503 = new Counter('graceful_capacity_rejections');
@@ -10,14 +15,7 @@ const collapseSignals = new Counter('system_collapse_signals');
 
 export const options = {
   scenarios: {
-    stress_after: {
-      executor: 'ramping-vus',
-      startVUs: 100,
-      stages: [
-        { duration: '30s', target: 100 },
-      ],
-      gracefulRampDown: '0s',
-    },
+    stress_after: stressScenarioOptions(),
   },
   thresholds: {
     checks: ['rate>0.98'],
@@ -33,6 +31,7 @@ export function setup() {
 }
 
 export default function () {
+  maybeWaitForStressBurst();
   const path = pickStressPath(afterStressPaths);
   const response = http.get(`${baseUrl}${path}`);
 
