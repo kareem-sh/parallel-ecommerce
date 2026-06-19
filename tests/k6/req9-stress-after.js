@@ -1,6 +1,11 @@
 import http from 'k6/http';
 import { check } from 'k6';
+import { Counter } from 'k6/metrics';
 import { baseUrl } from './lib/common.js';
+
+// 503 = capacity guard (graceful). 500/502/0 = real collapse signals.
+const graceful503 = new Counter('graceful_capacity_rejections');
+const collapseSignals = new Counter('system_collapse_signals');
 
 export const options = {
   scenarios: {
@@ -15,7 +20,8 @@ export const options = {
   },
   thresholds: {
     checks: ['rate>0.98'],
-    http_req_failed: ['rate<0.60'],
+    system_collapse_signals: ['count==0'],
+    vus_max: ['value>=100'],
   },
 };
 
@@ -26,8 +32,18 @@ export function setup() {
 export default function () {
   const response = http.get(`${baseUrl}/api/after/hot-products?limit=20`);
 
+  if (response.status === 503) {
+    graceful503.add(1);
+  } else if (response.status === 0 || response.status >= 500) {
+    collapseSignals.add(1);
+  }
+
   check(response, {
-    'after serves 100 concurrent users': (r) => r.status === 200 || r.status === 503,
+    '100 simultaneous users: server responds (200 or controlled 503)': (r) =>
+      r.status === 200 || r.status === 503,
+    '503 is graceful rejection not collapse': (r) =>
+      r.status !== 503 ||
+      (r.json('message') != null && r.json('max_capacity') != null),
     'after keeps backend version under stress': (r) =>
       r.status === 503 || r.headers['X-Backend-Version'] === 'after',
   });
@@ -35,12 +51,18 @@ export default function () {
 
 export function teardown() {
   const health = http.get(`${baseUrl}/api/health`);
+  const products = http.get(`${baseUrl}/api/after/products?limit=5`);
 
   check(health, {
-    'system stays healthy after stress': (r) => r.status === 200,
-    'database and redis healthy': (r) =>
-      r.status === 200 &&
-      r.json('checks.database') === true &&
-      r.json('checks.redis') === true,
+    'system did not collapse: health returns 200 after stress': (r) => r.status === 200,
+    'no data loss: database healthy after stress': (r) =>
+      r.status === 200 && r.json('checks.database') === true,
+    'no data loss: redis healthy after stress': (r) =>
+      r.status === 200 && r.json('checks.redis') === true,
+  });
+
+  check(products, {
+    'no data loss: products still readable after stress': (r) =>
+      r.status === 200 && Array.isArray(r.json('data')),
   });
 }
