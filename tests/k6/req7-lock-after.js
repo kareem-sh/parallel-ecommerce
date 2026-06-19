@@ -3,6 +3,9 @@ import { check, sleep } from 'k6';
 import { Counter, Rate } from 'k6/metrics';
 import { baseUrl } from './lib/common.js';
 
+// Req 7 after: Redis distributed lock across app + app2 (nginx after_backend pool).
+const STARTING_STOCK = 60;
+
 const lockTimeouts = new Counter('distributed_lock_timeouts');
 const accepted = new Counter('stock_adjust_accepted');
 const lockContentionRate = new Rate('lock_contention_rate');
@@ -27,7 +30,7 @@ export function setup() {
     sku: `LOCK-AFTER-${unique}`,
     name: 'Lock Test After',
     price: 15,
-    stock: 60,
+    stock: STARTING_STOCK,
   }), {
     headers: { 'Content-Type': 'application/json' },
   });
@@ -38,7 +41,7 @@ export function setup() {
 
   return {
     productId: response.json('data.id'),
-    startingStock: 60,
+    startingStock: STARTING_STOCK,
   };
 }
 
@@ -63,6 +66,10 @@ export default function (data) {
       r.status === 200 || r.status === 409 || r.status === 503,
     'after exposes distributed locking': (r) =>
       r.status !== 200 || r.json('locking') === 'distributed',
+    'after marks concurrency as safe on success': (r) =>
+      r.status !== 200 || r.json('concurrency_safe') === true,
+    'after response header shows distributed lock': (r) =>
+      r.status !== 200 || r.headers['X-Locking-Strategy'] === 'distributed',
     'after conflict mentions requirement 7': (r) =>
       r.status !== 409 || r.json('requirement') === 7,
     'after stock stays non-negative when accepted': (r) => {
@@ -81,8 +88,18 @@ export function teardown(data) {
   const products = response.json('data') || [];
   const product = products.find((item) => item.id === data.productId);
   const remaining = product ? product.stock : data.startingStock;
+  const actualRemoved = data.startingStock - remaining;
 
-  // Informational only — do not fail thresholds on teardown contention.
-  console.log(`lock-after remaining stock: ${remaining} (started ${data.startingStock})`);
+  console.log(
+    `req7-after demo: started=${data.startingStock} remaining=${remaining} ` +
+    `(removed ${actualRemoved}; lock serializes updates across both app servers)`,
+  );
+
+  check({ remaining, actualRemoved, startingStock: data.startingStock }, {
+    'after lock: inventory reaches zero under concurrent load': ({ remaining }) => remaining === 0,
+    'after lock: all starting stock was decremented exactly once': ({ actualRemoved, startingStock }) =>
+      actualRemoved === startingStock,
+  });
+
   sleep(0.1);
 }
