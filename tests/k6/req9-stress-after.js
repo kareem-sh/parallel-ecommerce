@@ -2,6 +2,7 @@ import http from 'k6/http';
 import { check } from 'k6';
 import { Counter } from 'k6/metrics';
 import { baseUrl } from './lib/common.js';
+import { afterStressPaths, pickStressPath } from './lib/stress-routes.js';
 
 // 503 = capacity guard (graceful). 500/502/0 = real collapse signals.
 const graceful503 = new Counter('graceful_capacity_rejections');
@@ -26,11 +27,14 @@ export const options = {
 };
 
 export function setup() {
-  http.get(`${baseUrl}/api/after/hot-products?limit=20`);
+  for (const path of afterStressPaths) {
+    http.get(`${baseUrl}${path}`);
+  }
 }
 
 export default function () {
-  const response = http.get(`${baseUrl}/api/after/hot-products?limit=20`);
+  const path = pickStressPath(afterStressPaths);
+  const response = http.get(`${baseUrl}${path}`);
 
   if (response.status === 503) {
     graceful503.add(1);
@@ -39,7 +43,7 @@ export default function () {
   }
 
   check(response, {
-    '100 simultaneous users: server responds (200 or controlled 503)': (r) =>
+    '100 simultaneous users: after mixed routes respond (200 or controlled 503)': (r) =>
       r.status === 200 || r.status === 503,
     '503 is graceful rejection not collapse': (r) =>
       r.status !== 503 ||

@@ -2,9 +2,9 @@
 
 namespace Database\Seeders;
 
-use App\Models\Order;
 use App\Models\Product;
 use App\Models\User;
+use Database\Seeders\DailySalesReportSeeder;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 
@@ -60,29 +60,6 @@ class DatabaseSeeder extends Seeder
             );
         }
 
-        $products = Product::query()->orderBy('id')->take(3)->get();
-
-        if (Order::query()->count() < 200 && $products->count() >= 3) {
-            for ($i = 1; $i <= 200; $i++) {
-                $product = $products[$i % $products->count()];
-                $quantity = ($i % 3) + 1;
-                $lineTotal = (float) $product->price * $quantity;
-
-                $order = Order::create([
-                    'customer_email' => "seed-buyer-{$i}@example.com",
-                    'status' => 'created',
-                    'total' => $lineTotal,
-                    'created_at' => now(),
-                    'updated_at' => now(),
-                ]);
-
-                $order->items()->create([
-                    'product_id' => $product->id,
-                    'quantity' => $quantity,
-                    'unit_price' => $product->price,
-                    'line_total' => $lineTotal,
-                ]);
-            }
-        }
+        $this->call(DailySalesReportSeeder::class);
     }
 }
