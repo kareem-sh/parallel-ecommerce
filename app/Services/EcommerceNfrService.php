@@ -469,7 +469,7 @@ NfrLogger::success('after_order_created_with_transaction_lock_and_cache_invalida
     {
         $started = microtime(true);
 
-        $order = DB::transaction(function () use ($data) {
+        $order = DB::transaction(function () use ($data, $started) {
             $order = Order::create([
                 'customer_email' => $data['customer_email'],
                 'status' => 'created',
@@ -502,6 +502,12 @@ NfrLogger::success('after_order_created_with_transaction_lock_and_cache_invalida
             }
 
             if ($data['fail_payment'] ?? false) {
+                NfrLogger::error('after_checkout_payment_failed_transaction_rollback', [
+                    'customer_email' => $data['customer_email'],
+                    'product_ids' => collect($data['items'])->pluck('product_id')->all(),
+                    'duration_ms' => $this->durationMs($started),
+                ]);
+
                 throw new RuntimeException('Payment failed; transaction rolled back.');
             }
 

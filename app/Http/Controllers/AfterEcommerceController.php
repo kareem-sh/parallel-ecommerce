@@ -134,7 +134,9 @@ class AfterEcommerceController extends Controller
                 'requirement' => 8,
                 'message' => $exception->getMessage(),
                 'rolled_back' => true,
+                'atomic' => true,
             ], 402)->header('X-Backend-Version', 'after')
+                ->header('X-Transaction-Rolled-Back', 'true')
                 ->header('X-Request-Id', $requestId);
         }
     }
